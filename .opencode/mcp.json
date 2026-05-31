@@ -1,0 +1,9 @@
+{
+  "mcp": {
+    "codegraph": {
+      "type": "local",
+      "command": ["/home/orianna/.local/share/fnm/node-versions/v22.22.3/installation/lib/node_modules/@colbymchenry/codegraph/node_modules/@colbymchenry/codegraph-linux-x64/bin/codegraph", "serve", "--mcp"],
+      "enabled": true
+    }
+  }
+}
