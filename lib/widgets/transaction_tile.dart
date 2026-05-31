@@ -47,7 +47,7 @@ class TransactionTile extends StatelessWidget {
                   const SizedBox(height: 2),
                   Text(
                     isDeclined
-                        ? 'Declined – Expired Card'
+                        ? 'Rechazado – Tarjeta vencida'
                         : '${transaction.category.label} • ${formatDate(transaction.date)}',
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       color: isDeclined ? AppColors.error : null,

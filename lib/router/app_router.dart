@@ -8,13 +8,14 @@ import '../screens/goals_screen.dart';
 import '../screens/settings_screen.dart';
 import '../screens/amount_screen.dart';
 import '../screens/add_expense_screen.dart';
+import '../screens/onboarding_screen.dart';
 
 final GlobalKey<NavigatorState> _rootNavigatorKey = GlobalKey<NavigatorState>();
 
-GoRouter createRouter() {
+GoRouter createRouter({String initialRoute = '/'}) {
   return GoRouter(
     navigatorKey: _rootNavigatorKey,
-    initialLocation: '/',
+    initialLocation: initialRoute,
     routes: [
       ShellRoute(
         builder: (context, state, child) {
@@ -81,6 +82,11 @@ GoRouter createRouter() {
           ) ?? 0;
           return TransactionDetailScreen(amount: amount);
         },
+      ),
+      GoRoute(
+        path: '/onboarding',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const OnboardingScreen(),
       ),
     ],
   );

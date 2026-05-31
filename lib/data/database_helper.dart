@@ -26,7 +26,7 @@ class DatabaseHelper {
     return await databaseFactoryFfi.openDatabase(
       path,
       options: OpenDatabaseOptions(
-        version: 3,
+        version: 4,
         onCreate: (db, version) => _onCreate(db, version),
         onUpgrade: (db, oldVersion, newVersion) =>
             _onUpgrade(db, oldVersion, newVersion),
@@ -78,6 +78,15 @@ class DatabaseHelper {
         icon TEXT DEFAULT 'account_balance_wallet'
       )
     ''');
+    await db.execute('''
+      CREATE TABLE goal_contributions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        goalId INTEGER NOT NULL,
+        amount REAL NOT NULL,
+        date TEXT NOT NULL,
+        FOREIGN KEY (goalId) REFERENCES goals(id) ON DELETE CASCADE
+      )
+    ''');
   }
 
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
@@ -97,6 +106,16 @@ class DatabaseHelper {
     }
     if (oldVersion < 3) {
       await db.execute('ALTER TABLE transactions ADD COLUMN accountId INTEGER');
+    }
+    if (oldVersion < 4) {
+      await db.execute('''
+        CREATE TABLE goal_contributions (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          goalId INTEGER NOT NULL,
+          amount REAL NOT NULL,
+          date TEXT NOT NULL
+        )
+      ''');
     }
   }
 
@@ -174,6 +193,37 @@ class DatabaseHelper {
     await db.update('goals', g.toMap(), where: 'id = ?', whereArgs: [g.id]);
   }
 
+  Future<void> deleteGoal(int id) async {
+    final db = await database;
+    await db.delete('goal_contributions', where: 'goalId = ?', whereArgs: [id]);
+    await db.delete('goals', where: 'id = ?', whereArgs: [id]);
+  }
+
+  // Goal contributions
+  Future<List<GoalContribution>> getContributions(int goalId) async {
+    final db = await database;
+    final maps = await db.query(
+      'goal_contributions',
+      where: 'goalId = ?',
+      whereArgs: [goalId],
+      orderBy: 'date DESC',
+    );
+    return maps.map((m) => GoalContribution.fromMap(m)).toList();
+  }
+
+  Future<void> addContribution(int goalId, double amount) async {
+    final db = await database;
+    await db.insert('goal_contributions', {
+      'goalId': goalId,
+      'amount': amount,
+      'date': DateTime.now().toIso8601String(),
+    });
+    await db.rawUpdate(
+      'UPDATE goals SET savedAmount = savedAmount + ? WHERE id = ?',
+      [amount, goalId],
+    );
+  }
+
   // Budgets
   Future<List<Budget>> getBudgets({int? month, int? year}) async {
     final db = await database;
@@ -196,11 +246,71 @@ class DatabaseHelper {
     await db.update('budgets', b.toMap(), where: 'id = ?', whereArgs: [b.id]);
   }
 
+  // Bulk operations
+  Future<Map<String, List<Map<String, dynamic>>>> exportAllData() async {
+    final db = await database;
+    final transactions = await db.query('transactions', orderBy: 'date DESC');
+    final goals = await db.query('goals');
+    final budgets = await db.query('budgets');
+    final accounts = await db.query('accounts');
+    return {
+      'transactions': transactions,
+      'goals': goals,
+      'budgets': budgets,
+      'accounts': accounts,
+    };
+  }
+
+  Future<void> importAllData(Map<String, List<Map<String, dynamic>>> data) async {
+    final db = await database;
+    await db.transaction((txn) async {
+      await txn.delete('transactions');
+      await txn.delete('goals');
+      await txn.delete('budgets');
+      await txn.delete('accounts');
+      for (final t in data['transactions'] ?? []) {
+        final map = Map<String, dynamic>.from(t);
+        map.remove('id');
+        await txn.insert('transactions', map);
+      }
+      for (final g in data['goals'] ?? []) {
+        final map = Map<String, dynamic>.from(g);
+        map.remove('id');
+        await txn.insert('goals', map);
+      }
+      for (final b in data['budgets'] ?? []) {
+        final map = Map<String, dynamic>.from(b);
+        map.remove('id');
+        await txn.insert('budgets', map);
+      }
+      for (final a in data['accounts'] ?? []) {
+        final map = Map<String, dynamic>.from(a);
+        map.remove('id');
+        await txn.insert('accounts', map);
+      }
+    });
+  }
+
+  Future<void> deleteAllData() async {
+    final db = await database;
+    await db.transaction((txn) async {
+      await txn.delete('transactions');
+      await txn.delete('goals');
+      await txn.delete('budgets');
+      await txn.delete('accounts');
+    });
+  }
+
   // Accounts
   Future<List<Account>> getAccounts() async {
     final db = await database;
     final maps = await db.query('accounts');
     return maps.map((m) => Account.fromMap(m)).toList();
+  }
+
+  Future<int> insertAccount(Account account) async {
+    final db = await database;
+    return await db.insert('accounts', account.toMap());
   }
 
   // Stats

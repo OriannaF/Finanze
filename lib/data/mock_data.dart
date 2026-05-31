@@ -16,7 +16,7 @@ class MockData {
       date: DateTime.now().subtract(const Duration(hours: 5)),
     ),
     Transaction(
-      title: 'Salary Deposit', amount: 3200.00,
+      title: 'Depósito de sueldo', amount: 3200.00,
       category: TransactionCategory.salary,
       type: TransactionType.income, accountId: 2,
       date: DateTime.now().subtract(const Duration(days: 1, hours: 3)),
@@ -27,7 +27,7 @@ class MockData {
       date: DateTime.now().subtract(const Duration(days: 1, hours: 6)),
     ),
     Transaction(
-      title: 'Cold Storage', amount: 6.71,
+      title: 'Almacenamiento', amount: 6.71,
       category: TransactionCategory.food, accountId: 1,
       date: DateTime.now().subtract(const Duration(days: 2)),
     ),
@@ -47,17 +47,17 @@ class MockData {
       date: DateTime.now().subtract(const Duration(days: 5)),
     ),
     Transaction(
-      title: 'Supermarket', amount: 85.30,
+      title: 'Supermercado', amount: 85.30,
       category: TransactionCategory.food, accountId: 1,
       date: DateTime.now().subtract(const Duration(days: 6)),
     ),
     Transaction(
-      title: 'Gas Station', amount: 45.00,
+      title: 'Gasolinera', amount: 45.00,
       category: TransactionCategory.transport, accountId: 1,
       date: DateTime.now().subtract(const Duration(days: 7)),
     ),
     Transaction(
-      title: 'Freelance Payment', amount: 500.00,
+      title: 'Pago freelance', amount: 500.00,
       category: TransactionCategory.freelance,
       type: TransactionType.income, accountId: 2,
       date: DateTime.now().subtract(const Duration(days: 8)),
@@ -71,42 +71,42 @@ class MockData {
 
   static final List<Goal> goals = [
     Goal(
-      title: 'Japan Trip',
+      title: 'Viaje a Japón',
       targetAmount: 3000,
       savedAmount: 900,
-      deadline: 'Aug 2026',
+      deadline: 'Ago 2026',
       icon: 'flight_takeoff',
     ),
     Goal(
-      title: 'Emergency Fund',
+      title: 'Fondo de emergencia',
       targetAmount: 10000,
       savedAmount: 3500,
-      deadline: 'Dec 2026',
+      deadline: 'Dic 2026',
       icon: 'savings',
     ),
   ];
 
   static final List<Budget> budgets = [
     Budget(
-      categoryName: 'Groceries',
+      categoryName: 'Comestibles',
       category: TransactionCategory.food,
       limit: 500,
       spent: 380,
     ),
     Budget(
-      categoryName: 'Dining',
+      categoryName: 'Restaurantes',
       category: TransactionCategory.food,
       limit: 200,
       spent: 215,
     ),
     Budget(
-      categoryName: 'Transport',
+      categoryName: 'Transporte',
       category: TransactionCategory.transport,
       limit: 150,
       spent: 70,
     ),
     Budget(
-      categoryName: 'Shopping',
+      categoryName: 'Compras',
       category: TransactionCategory.shopping,
       limit: 300,
       spent: 196,

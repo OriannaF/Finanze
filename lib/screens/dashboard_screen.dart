@@ -41,12 +41,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 const SizedBox(height: 16),
                 // Header
                 Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
+                    Image.asset(
+                      'assets/images/zoe_sentada.png',
+                      width: 32,
+                      height: 32,
+                    ),
+                    const SizedBox(width: 8),
                     Text(
                       'Hola, usuario',
                       style: Theme.of(context).textTheme.headlineMedium,
                     ),
+                    const Spacer(),
                     GestureDetector(
                       onTap: () => context.push('/settings'),
                       child: Container(

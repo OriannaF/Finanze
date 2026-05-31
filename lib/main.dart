@@ -5,10 +5,12 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:intl/intl.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'data/database_helper.dart';
 import 'providers/theme_provider.dart';
 import 'providers/transaction_provider.dart';
 import 'providers/goal_provider.dart';
+import 'providers/settings_provider.dart';
 import 'theme/app_theme.dart';
 import 'router/app_router.dart';
 
@@ -20,6 +22,9 @@ void main() async {
   final db = DatabaseHelper();
   await db.insertMockData();
 
+  final prefs = await SharedPreferences.getInstance();
+  final onboardingCompleted = prefs.getBool('onboardingCompleted') ?? false;
+
   runApp(
     DevicePreview(
       enabled: !kReleaseMode,
@@ -28,15 +33,17 @@ void main() async {
           ChangeNotifierProvider(create: (_) => ThemeProvider()),
           ChangeNotifierProvider(create: (_) => TransactionProvider()),
           ChangeNotifierProvider(create: (_) => GoalProvider()),
+          ChangeNotifierProvider(create: (_) => SettingsProvider()),
         ],
-        child: const FinanzeApp(),
+        child: FinanzeApp(initialRoute: onboardingCompleted ? '/' : '/onboarding'),
       ),
     ),
   );
 }
 
 class FinanzeApp extends StatelessWidget {
-  const FinanzeApp({super.key});
+  final String initialRoute;
+  const FinanzeApp({super.key, required this.initialRoute});
 
   @override
   Widget build(BuildContext context) {
@@ -56,7 +63,7 @@ class FinanzeApp extends StatelessWidget {
       theme: AppTheme.light,
       darkTheme: AppTheme.dark,
       themeMode: themeProvider.themeMode,
-      routerConfig: createRouter(),
+      routerConfig: createRouter(initialRoute: initialRoute),
     );
   }
 }

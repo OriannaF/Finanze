@@ -3,7 +3,7 @@ import 'package:finanze_app/main.dart';
 
 void main() {
   testWidgets('App renders without error', (WidgetTester tester) async {
-    await tester.pumpWidget(const FinanzeApp());
+    await tester.pumpWidget(const FinanzeApp(initialRoute: '/'));
     expect(find.byType(FinanzeApp), findsOneWidget);
   });
 }

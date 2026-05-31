@@ -39,7 +39,7 @@ class _ActivityScreenState extends State<ActivityScreen> {
               children: [
                 const SizedBox(height: 16),
                 Text(
-                  'Activity',
+                  'Actividad',
                   style: Theme.of(context).textTheme.headlineMedium,
                 ),
                 const SizedBox(height: 16),

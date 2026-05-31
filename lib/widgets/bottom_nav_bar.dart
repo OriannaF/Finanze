@@ -42,27 +42,20 @@ class BottomNavBar extends StatelessWidget {
                 onTap: () => onTap(i),
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 200),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        isSelected ? item.activeIcon : item.icon,
-                        size: 24,
-                        color: isSelected
-                            ? AppColors.primary
-                            : AppColors.onSurfaceVariant.withValues(alpha: 0.5),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        item.label,
-                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                          color: isSelected
-                              ? AppColors.primary
-                              : AppColors.onSurfaceVariant.withValues(alpha: 0.5),
-                          fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-                        ),
-                      ),
-                    ],
+                  child: Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      color: isSelected
+                          ? AppColors.surfaceContainer
+                          : Colors.transparent,
+                      borderRadius: BorderRadius.circular(22),
+                    ),
+                    child: Icon(
+                      item.icon,
+                      size: 22,
+                      color: AppColors.primary,
+                    ),
                   ),
                 ),
               );
@@ -76,18 +69,16 @@ class BottomNavBar extends StatelessWidget {
 
 class _NavItem {
   final IconData icon;
-  final IconData activeIcon;
   final String label;
   const _NavItem({
     required this.icon,
-    required this.activeIcon,
     required this.label,
   });
 }
 
 const List<_NavItem> _items = [
-  _NavItem(icon: Icons.home_outlined, activeIcon: Icons.home, label: 'Inicio'),
-  _NavItem(icon: Icons.receipt_long_outlined, activeIcon: Icons.receipt_long, label: 'Actividad'),
-  _NavItem(icon: Icons.insert_chart_outlined, activeIcon: Icons.insert_chart, label: 'Análisis'),
-  _NavItem(icon: Icons.flag_outlined, activeIcon: Icons.flag, label: 'Metas'),
+  _NavItem(icon: Icons.home, label: 'Inicio'),
+  _NavItem(icon: Icons.receipt_long, label: 'Actividad'),
+  _NavItem(icon: Icons.insert_chart, label: 'Análisis'),
+  _NavItem(icon: Icons.flag, label: 'Metas'),
 ];

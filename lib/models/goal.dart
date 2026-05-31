@@ -1,3 +1,31 @@
+class GoalContribution {
+  final int? id;
+  final int goalId;
+  final double amount;
+  final DateTime date;
+
+  GoalContribution({
+    this.id,
+    required this.goalId,
+    required this.amount,
+    DateTime? date,
+  }) : date = date ?? DateTime.now();
+
+  Map<String, dynamic> toMap() => {
+    if (id != null) 'id': id,
+    'goalId': goalId,
+    'amount': amount,
+    'date': date.toIso8601String(),
+  };
+
+  factory GoalContribution.fromMap(Map<String, dynamic> map) => GoalContribution(
+    id: map['id'] as int?,
+    goalId: map['goalId'] as int,
+    amount: (map['amount'] as num).toDouble(),
+    date: DateTime.parse(map['date'] as String),
+  );
+}
+
 class Goal {
   final int? id;
   final String title;

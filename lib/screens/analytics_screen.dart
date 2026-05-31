@@ -53,6 +53,13 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const SizedBox(height: 16),
+                Center(
+                  child: Text(
+                    'Estadísticas',
+                    style: Theme.of(context).textTheme.headlineMedium,
+                  ),
+                ),
+                const SizedBox(height: 16),
                 // Centered Segmented Control
                 Center(
                   child: SegmentedControl(
@@ -75,7 +82,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                 const SizedBox(height: 24),
                 // Total
                 Text(
-                  'total',
+                  'Total',
                   style: Theme.of(context).textTheme.labelSmall?.copyWith(
                     letterSpacing: 1,
                     color: AppColors.onSurfaceVariant,
@@ -204,7 +211,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                                       style: Theme.of(context).textTheme.titleLarge,
                                     ),
                                     Text(
-                                      '${_getCountForCategory(expenses, category)} Transaccion${_getCountForCategory(expenses, category) != 1 ? 'es' : ''}',
+                                      '${_getCountForCategory(expenses, category)} Transacción${_getCountForCategory(expenses, category) != 1 ? 'es' : ''}',
                                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 13),
                                     ),
                                   ],
@@ -322,7 +329,15 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
             barRods: [
               BarChartRodData(
                 toY: entry.value > 0 ? entry.value : 2,
-                color: AppColors.meshPurple,
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: const [
+                    Color(0xFFbda7e0),
+                    Color(0xFFad91d6),
+                    Color(0xFFf3b5c9),
+                  ],
+                ),
                 width: 16,
                 borderRadius: const BorderRadius.only(
                   topLeft: Radius.circular(4),

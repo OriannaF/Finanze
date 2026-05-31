@@ -4,7 +4,7 @@ String formatCurrency(double amount) {
   final format = NumberFormat.currency(
     symbol: r'$',
     decimalDigits: 2,
-    locale: 'en_US',
+    locale: 'es_AR',
   );
   return format.format(amount);
 }
