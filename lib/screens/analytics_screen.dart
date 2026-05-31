@@ -1,5 +1,6 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../providers/transaction_provider.dart';
@@ -74,7 +75,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                 const SizedBox(height: 24),
                 // Date range
                 Text(
-                  '${formatDayMonth(DateTime.now().subtract(const Duration(days: 7)))} – ${formatDayMonth(DateTime.now())}',
+                  _dateRangeText,
                   style: Theme.of(context).textTheme.displayLarge?.copyWith(
                     fontSize: 28,
                   ),
@@ -110,7 +111,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                   ),
                   child: SizedBox(
                     height: 180,
-                    child: _buildBarChart(expenses),
+                    child: _buildBarChart(expenses, _periods[_selectedFilter]),
                   ),
                 ),
                 const SizedBox(height: 24),
@@ -180,7 +181,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                       final isLast = entry == sortedCategories.last;
 
                       return InkWell(
-                        onTap: () {},
+                        onTap: () => context.go('/activity', extra: category),
                         borderRadius: isLast
                             ? const BorderRadius.vertical(bottom: Radius.circular(28))
                             : null,
@@ -243,7 +244,27 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
     );
   }
 
-  Widget _buildBarChart(List<Transaction> expenses) {
+  String get _dateRangeText {
+    final now = DateTime.now();
+    switch (_selectedFilter) {
+      case 0:
+        return '${formatDayMonth(now.subtract(const Duration(days: 7)))} – ${formatDayMonth(now)}';
+      case 1:
+        return '${formatDayMonth(DateTime(now.year, now.month, 1))} – ${formatDayMonth(now)}';
+      case 2:
+        return '${formatMonthYear(DateTime(now.year, 1, 1))} – ${formatMonthYear(now)}';
+      default:
+        return '';
+    }
+  }
+
+  Widget _buildBarChart(List<Transaction> expenses, String period) {
+    if (period == 'week') return _buildDailyChart(expenses);
+    if (period == 'month') return _buildWeeklyChart(expenses);
+    return _buildMonthlyChart(expenses);
+  }
+
+  Widget _buildDailyChart(List<Transaction> expenses) {
     final dayTotals = <String, double>{};
     for (int i = 6; i >= 0; i--) {
       final day = DateTime.now().subtract(Duration(days: i));
@@ -251,7 +272,6 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
           DateFormat.E('es').format(day).substring(1, 3);
       dayTotals[key] = 0;
     }
-
     for (final t in expenses) {
       final diff = DateTime.now().difference(t.date).inDays;
       if (diff >= 0 && diff < 7) {
@@ -261,8 +281,39 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
         dayTotals[key] = (dayTotals[key] ?? 0) + t.amount;
       }
     }
+    return _buildBar(dayTotals);
+  }
 
-    final maxVal = dayTotals.values.fold(0.0, (a, b) => a > b ? a : b);
+  Widget _buildWeeklyChart(List<Transaction> expenses) {
+    final now = DateTime.now();
+    final weekTotals = <String, double>{};
+    for (int w = 0; w < 4; w++) {
+      weekTotals['Sem ${w + 1}'] = 0;
+    }
+    for (final t in expenses) {
+      final daysAgo = now.difference(t.date).inDays;
+      if (daysAgo >= 0 && daysAgo < 28) {
+        final weekIndex = daysAgo ~/ 7;
+        weekTotals['Sem ${weekIndex + 1}'] =
+            (weekTotals['Sem ${weekIndex + 1}'] ?? 0) + t.amount;
+      }
+    }
+    return _buildBar(weekTotals);
+  }
+
+  Widget _buildMonthlyChart(List<Transaction> expenses) {
+    final monthTotals = <String, double>{};
+    for (int m = 1; m <= 12; m++) {
+      monthTotals['$m'] = 0;
+    }
+    for (final t in expenses) {
+      monthTotals['${t.date.month}'] = (monthTotals['${t.date.month}'] ?? 0) + t.amount;
+    }
+    return _buildBar(monthTotals);
+  }
+
+  Widget _buildBar(Map<String, double> data) {
+    final maxVal = data.values.fold(0.0, (a, b) => a > b ? a : b);
 
     return BarChart(
       BarChartData(
@@ -296,13 +347,13 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
               showTitles: true,
               getTitlesWidget: (value, meta) {
                 final i = value.toInt();
-                if (i < 0 || i >= dayTotals.keys.length) {
+                if (i < 0 || i >= data.keys.length) {
                   return const SizedBox();
                 }
                 return Padding(
                   padding: const EdgeInsets.only(top: 4),
                   child: Text(
-                    dayTotals.keys.elementAt(i),
+                    data.keys.elementAt(i),
                     style: const TextStyle(
                       fontSize: 10,
                       color: AppColors.onSurfaceVariant,
@@ -323,9 +374,9 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
           ),
         ),
         borderData: FlBorderData(show: false),
-        barGroups: dayTotals.entries.map((entry) {
+        barGroups: data.entries.map((entry) {
           return BarChartGroupData(
-            x: dayTotals.keys.toList().indexOf(entry.key),
+            x: data.keys.toList().indexOf(entry.key),
             barRods: [
               BarChartRodData(
                 toY: entry.value > 0 ? entry.value : 2,

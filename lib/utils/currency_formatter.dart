@@ -1,19 +1,33 @@
 import 'package:intl/intl.dart';
 
+String _numberLocale = 'es_AR';
+
+String get numberLocale => _numberLocale;
+
+void setNumberLocale(String locale) {
+  _numberLocale = locale;
+}
+
 String formatCurrency(double amount) {
-  final format = NumberFormat.currency(
-    symbol: r'$',
-    decimalDigits: 2,
-    locale: 'es_AR',
-  );
-  return format.format(amount);
+  final abs = amount.abs();
+  final formatted = NumberFormat('#,##0.00', _numberLocale).format(abs);
+  final sign = amount < 0 ? '-' : '';
+  return '$sign\$$formatted';
 }
 
 String formatCompactCurrency(double amount) {
-  if (amount >= 1000000) {
-    return '\$${(amount / 1000000).toStringAsFixed(1)}M';
-  } else if (amount >= 1000) {
-    return '\$${(amount / 1000).toStringAsFixed(0)}k';
+  final sign = amount < 0 ? '-' : '';
+  final abs = amount.abs();
+  if (abs >= 1000000) {
+    final formatted = _compactNumber(abs / 1000000);
+    return '$sign\$${formatted}M';
+  } else if (abs >= 1000) {
+    final formatted = _compactNumber(abs / 1000);
+    return '$sign\$${formatted}k';
   }
   return formatCurrency(amount);
+}
+
+String _compactNumber(double value) {
+  return NumberFormat('#,##0.#', _numberLocale).format(value);
 }

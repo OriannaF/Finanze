@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 
 enum TransactionType { expense, income }
 
+enum RecurringInterval { none, daily, weekly, monthly, yearly }
+
 enum TransactionCategory {
   // Expense
   food,
@@ -89,6 +91,10 @@ class Transaction {
   final TransactionType type;
   final DateTime date;
   final String note;
+  final String customCategoryName;
+  final RecurringInterval recurringInterval;
+  final DateTime? recurringEndDate;
+  final int? parentRecurringId;
 
   Transaction({
     this.id,
@@ -99,6 +105,10 @@ class Transaction {
     this.type = TransactionType.expense,
     DateTime? date,
     this.note = '',
+    this.customCategoryName = '',
+    this.recurringInterval = RecurringInterval.none,
+    this.recurringEndDate,
+    this.parentRecurringId,
   }) : date = date ?? DateTime.now();
 
   Map<String, dynamic> toMap() {
@@ -109,14 +119,19 @@ class Transaction {
       'type': type.name,
       'date': date.toIso8601String(),
       'note': note,
+      'recurring_interval': recurringInterval.name,
     };
     if (id != null) map['id'] = id;
     if (accountId != null) map['accountId'] = accountId;
+    if (customCategoryName.isNotEmpty) map['customCategoryName'] = customCategoryName;
+    if (recurringEndDate != null) map['recurring_end_date'] = recurringEndDate!.toIso8601String();
+    if (parentRecurringId != null) map['parent_recurring_id'] = parentRecurringId;
     return map;
   }
 
   factory Transaction.fromMap(Map<String, dynamic> map) {
     final typeStr = map['type'] as String? ?? 'expense';
+    final recurringStr = map['recurring_interval'] as String? ?? 'none';
     return Transaction(
       id: map['id'] as int?,
       accountId: map['accountId'] as int?,
@@ -129,6 +144,15 @@ class Transaction {
       type: typeStr == 'income' ? TransactionType.income : TransactionType.expense,
       date: DateTime.parse(map['date'] as String),
       note: map['note'] as String? ?? '',
+      customCategoryName: map['customCategoryName'] as String? ?? '',
+      recurringInterval: RecurringInterval.values.firstWhere(
+        (e) => e.name == recurringStr,
+        orElse: () => RecurringInterval.none,
+      ),
+      recurringEndDate: map['recurring_end_date'] != null
+          ? DateTime.parse(map['recurring_end_date'] as String)
+          : null,
+      parentRecurringId: map['parent_recurring_id'] as int?,
     );
   }
 
@@ -141,6 +165,10 @@ class Transaction {
     TransactionType? type,
     DateTime? date,
     String? note,
+    String? customCategoryName,
+    RecurringInterval? recurringInterval,
+    DateTime? recurringEndDate,
+    int? parentRecurringId,
   }) => Transaction(
     id: id ?? this.id,
     accountId: accountId ?? this.accountId,
@@ -150,5 +178,9 @@ class Transaction {
     type: type ?? this.type,
     date: date ?? this.date,
     note: note ?? this.note,
+    customCategoryName: customCategoryName ?? this.customCategoryName,
+    recurringInterval: recurringInterval ?? this.recurringInterval,
+    recurringEndDate: recurringEndDate ?? this.recurringEndDate,
+    parentRecurringId: parentRecurringId ?? this.parentRecurringId,
   );
 }

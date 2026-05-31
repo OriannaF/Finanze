@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:path_provider/path_provider.dart';
 import '../data/database_helper.dart';
@@ -38,6 +39,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
     return Scaffold(
       appBar: AppBar(
+        automaticallyImplyLeading: false,
         leading: GestureDetector(
           onTap: () => Navigator.of(context).pop(),
           child: Container(
@@ -69,12 +71,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
                 const _SettingsDivider(),
                 _SettingsItem(
-                  icon: Icons.pie_chart_outline,
-                  label: 'Límite de presupuesto mensual',
-                  trailing: Text(settings.monthlyBudgetLimit > 0
-                      ? '\$${settings.monthlyBudgetLimit.toStringAsFixed(0)}'
-                      : 'Sin límite'),
-                  onTap: () => _showBudgetLimitDialog(settings),
+                  icon: Icons.numbers,
+                  label: 'Formato',
+                  trailing: Text(settings.numberLocale == 'es_AR' ? '10.000,00' : '10,000.00'),
+                  onTap: () => _showNumberFormatPicker(settings),
                 ),
                 const _SettingsDivider(),
                 _SettingsItem(
@@ -82,6 +82,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   label: 'Cuenta por defecto',
                   trailing: Text(_defaultAccountName(settings)),
                   onTap: () => _showDefaultAccountPicker(settings),
+                ),
+                const _SettingsDivider(),
+                _SettingsItem(
+                  icon: Icons.manage_accounts,
+                  label: 'Administrar cuentas',
+                  trailing: const Icon(Icons.chevron_right, color: AppColors.outlineVariant),
+                  onTap: () => context.push('/account-settings'),
                 ),
               ],
             ),
@@ -196,43 +203,36 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  void _showBudgetLimitDialog(SettingsProvider settings) {
-    final controller = TextEditingController(
-      text: settings.monthlyBudgetLimit > 0
-          ? settings.monthlyBudgetLimit.toStringAsFixed(0)
-          : '',
-    );
-    showDialog(
+  void _showNumberFormatPicker(SettingsProvider settings) {
+    const options = [
+      {'locale': 'es_AR', 'label': '10.000,00'},
+      {'locale': 'en_US', 'label': '10,000.00'},
+    ];
+    showModalBottomSheet(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Límite de presupuesto mensual'),
-        content: TextField(
-          controller: controller,
-          keyboardType: TextInputType.number,
-          decoration: const InputDecoration(
-            hintText: 'Ingresa un monto',
-            border: OutlineInputBorder(),
-          ),
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Padding(
+              padding: EdgeInsets.all(16),
+              child: Text('Formato',
+                  style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600)),
+            ),
+            const Divider(height: 1),
+            ...options.map((opt) => ListTile(
+              leading: Icon(
+                opt['locale'] == settings.numberLocale ? Icons.radio_button_checked : Icons.radio_button_off,
+                color: AppColors.primary,
+              ),
+              title: Text(opt['label']!),
+              onTap: () {
+                settings.updateNumberLocale(opt['locale']!);
+                Navigator.pop(ctx);
+              },
+            )),
+          ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              settings.setMonthlyBudgetLimit(0);
-              Navigator.pop(ctx);
-            },
-            child: const Text('Sin límite'),
-          ),
-          FilledButton(
-            onPressed: () {
-              final value = double.tryParse(controller.text);
-              if (value != null && value > 0) {
-                settings.setMonthlyBudgetLimit(value);
-              }
-              Navigator.pop(ctx);
-            },
-            child: const Text('Guardar'),
-          ),
-        ],
       ),
     );
   }
@@ -534,6 +534,47 @@ class _SettingsDivider extends StatelessWidget {
   }
 }
 
+const List<String> _allCategoryIcons = [
+  'restaurant', 'directions_car', 'shopping_bag', 'bolt', 'local_activity',
+  'local_hospital', 'school', 'payments', 'code', 'trending_up', 'home',
+  'card_giftcard', 'more_horiz', 'flight_takeoff', 'savings', 'shopping_cart',
+  'favorite', 'pets', 'devices', 'fitness_center', 'book', 'wallet', 'money',
+];
+
+IconData _iconDataFromName(String name) {
+  const map = {
+    'restaurant': Icons.restaurant,
+    'directions_car': Icons.directions_car,
+    'shopping_bag': Icons.shopping_bag,
+    'bolt': Icons.bolt,
+    'local_activity': Icons.local_activity,
+    'local_hospital': Icons.local_hospital,
+    'school': Icons.school,
+    'payments': Icons.payments,
+    'code': Icons.code,
+    'trending_up': Icons.trending_up,
+    'home': Icons.home,
+    'card_giftcard': Icons.card_giftcard,
+    'more_horiz': Icons.more_horiz,
+    'flight_takeoff': Icons.flight_takeoff,
+    'savings': Icons.savings,
+    'shopping_cart': Icons.shopping_cart,
+    'favorite': Icons.favorite,
+    'pets': Icons.pets,
+    'devices': Icons.devices,
+    'fitness_center': Icons.fitness_center,
+    'book': Icons.book,
+    'wallet': Icons.wallet,
+    'money': Icons.money,
+  };
+  return map[name] ?? Icons.more_horiz;
+}
+
+Color _colorFromHex(String hex) {
+  hex = hex.replaceFirst('#', '');
+  return Color(int.parse('FF$hex', radix: 16));
+}
+
 class _CategoriesScreen extends StatefulWidget {
   const _CategoriesScreen();
 
@@ -542,27 +583,13 @@ class _CategoriesScreen extends StatefulWidget {
 }
 
 class _CategoriesScreenState extends State<_CategoriesScreen> {
-  late TextEditingController _controller;
-  TransactionCategory? _editing;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = TextEditingController();
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
   @override
   Widget build(BuildContext context) {
     final settings = context.watch<SettingsProvider>();
 
     return Scaffold(
       appBar: AppBar(
+        automaticallyImplyLeading: false,
         title: const Text('Categorías personalizadas'),
         leading: GestureDetector(
           onTap: () => Navigator.pop(context),
@@ -580,90 +607,266 @@ class _CategoriesScreenState extends State<_CategoriesScreen> {
       body: ListView(
         padding: const EdgeInsets.all(20),
         children: [
-          ...TransactionCategory.values.map((cat) => Card(
-            margin: const EdgeInsets.only(bottom: 8),
-            child: ListTile(
-              leading: CircleAvatar(
-                backgroundColor: AppColors.tertiaryFixedDim.withValues(alpha: 0.3),
-                child: Icon(
-                  _iconForCategory(cat),
-                  size: 20,
-                  color: AppColors.onTertiaryContainer,
-                ),
-              ),
-              title: Text(settings.getCategoryLabel(cat)),
-              subtitle: Text(cat.name),
-              trailing: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.edit_outlined, size: 20),
-                    onPressed: () => _startEditing(cat, settings),
-                  ),
-                  if (settings.customCategoryLabels.containsKey(cat.name))
-                    IconButton(
-                      icon: const Icon(Icons.restore_outlined, size: 20),
-                      onPressed: () => settings.resetCustomCategoryLabel(cat),
-                    ),
-                ],
+          if (settings.customCategories.isNotEmpty) ...[
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Text('Tuyas',
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: AppColors.onSurfaceVariant)),
+            ),
+            ...settings.customCategories.entries.map((entry) => _CategoryListTile(
+              name: entry.key,
+              iconName: entry.value['icon'] ?? 'more_horiz',
+              colorHex: entry.value['color'] ?? '#757575',
+              onEdit: () => _showEditDialog(entry.key, settings, isCustom: true),
+              onDelete: () => _confirmDelete(entry.key, settings),
+            )),
+            const SizedBox(height: 16),
+          ],
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Text('Predeterminadas',
+                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: AppColors.onSurfaceVariant)),
+          ),
+          ...TransactionCategory.values.map((cat) {
+            final hex = '#${cat.color.toARGB32().toRadixString(16).substring(2).toUpperCase()}';
+            return _CategoryListTile(
+              name: settings.getCategoryLabel(cat),
+              iconName: cat.icon,
+              colorHex: hex,
+              hasCustomLabel: settings.customCategoryLabels.containsKey(cat.name),
+              onEdit: () => _showEditDialog(cat.name, settings, isCustom: false, cat: cat),
+              onReset: settings.customCategoryLabels.containsKey(cat.name)
+                  ? () => settings.resetCustomCategoryLabel(cat)
+                  : null,
+            );
+          }),
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: () => _showEditDialog(null, settings),
+              icon: const Icon(Icons.add),
+              label: const Text('Añadir categoría personalizada'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppColors.primary,
+                side: const BorderSide(color: AppColors.outlineVariant),
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
               ),
             ),
-          )),
+          ),
         ],
       ),
     );
   }
 
-  void _startEditing(TransactionCategory cat, SettingsProvider settings) {
-    _editing = cat;
-    _controller.text = settings.getCategoryLabel(cat);
+  void _showEditDialog(String? name, SettingsProvider settings,
+      {bool isCustom = false, TransactionCategory? cat}) {
+    final nameCtrl = TextEditingController(text: name ?? '');
+    String selectedIcon = isCustom
+        ? (settings.customCategories[name]?['icon'] ?? 'more_horiz')
+        : (cat?.icon ?? 'more_horiz');
+    String selectedColor = isCustom
+        ? (settings.customCategories[name]?['color'] ?? '#757575')
+        : (cat != null
+            ? '#${cat.color.toARGB32().toRadixString(16).substring(2).toUpperCase()}'
+            : '#757575');
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          title: Text(name == null ? 'Nueva categoría' : 'Editar categoría'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                TextField(
+                  controller: nameCtrl,
+                  autofocus: name == null,
+                  decoration: const InputDecoration(
+                    hintText: 'Nombre',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Text('Ícono', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: AppColors.onSurfaceVariant)),
+                const SizedBox(height: 8),
+                SizedBox(
+                  height: 56,
+                  child: ListView(
+                    scrollDirection: Axis.horizontal,
+                    children: _allCategoryIcons.map((iconName) {
+                      final isSel = selectedIcon == iconName;
+                      return GestureDetector(
+                        onTap: () => setDialogState(() => selectedIcon = iconName),
+                        child: Container(
+                          width: 52,
+                          height: 52,
+                          margin: const EdgeInsets.only(right: 8),
+                          decoration: BoxDecoration(
+                            color: isSel ? _colorFromHex(selectedColor) : _colorFromHex(selectedColor).withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(26),
+                          ),
+                          child: Icon(
+                            _iconDataFromName(iconName),
+                            size: 22,
+                            color: isSel ? Colors.white : _colorFromHex(selectedColor),
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Text('Color', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: AppColors.onSurfaceVariant)),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: accountColors.map((c) {
+                    final hex = '#${c.toARGB32().toRadixString(16).substring(2).toUpperCase()}';
+                    final isSel = selectedColor == hex;
+                    return GestureDetector(
+                      onTap: () => setDialogState(() {
+                        selectedColor = hex;
+                      }),
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        width: 36,
+                        height: 36,
+                        decoration: BoxDecoration(
+                          color: c,
+                          borderRadius: BorderRadius.circular(18),
+                          border: isSel ? Border.all(color: AppColors.primary, width: 3) : null,
+                        ),
+                        child: isSel ? const Icon(Icons.check, color: Colors.white, size: 18) : null,
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            if (name != null && !isCustom)
+              TextButton(
+                onPressed: () {
+                  settings.resetCustomCategoryLabel(cat!);
+                  Navigator.pop(ctx);
+                },
+                child: const Text('Restaurar', style: TextStyle(color: AppColors.onSurfaceVariant)),
+              ),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Cancelar'),
+            ),
+            FilledButton(
+              onPressed: () {
+                final newName = nameCtrl.text.trim();
+                if (newName.isEmpty) return;
+                if (name == null) {
+                  settings.addCustomCategory(newName, selectedIcon, selectedColor);
+                } else if (isCustom) {
+                  settings.editCustomCategory(name, newName, selectedIcon, selectedColor);
+                } else if (cat != null) {
+                  settings.setCustomCategoryLabel(cat, newName);
+                }
+                Navigator.pop(ctx);
+              },
+              child: const Text('Guardar'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _confirmDelete(String name, SettingsProvider settings) {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Editar categoría'),
-        content: TextField(
-          controller: _controller,
-          autofocus: true,
-          decoration: const InputDecoration(
-            hintText: 'Nombre',
-            border: OutlineInputBorder(),
-          ),
-        ),
+        title: const Text('Eliminar categoría'),
+        content: Text('¿Eliminar "$name"? Esta acción no se puede deshacer.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancelar'),
+            child: const Text('Cancelar', style: TextStyle(color: AppColors.onSurfaceVariant)),
           ),
           FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: AppColors.error),
             onPressed: () {
-              if (_controller.text.trim().isNotEmpty && _editing != null) {
-                settings.setCustomCategoryLabel(_editing!, _controller.text.trim());
-              }
+              settings.deleteCustomCategory(name);
               Navigator.pop(ctx);
             },
-            child: const Text('Guardar'),
+            child: const Text('Eliminar'),
           ),
         ],
       ),
     );
   }
+}
 
-  IconData _iconForCategory(TransactionCategory cat) {
-    switch (cat) {
-      case TransactionCategory.food: return Icons.restaurant;
-      case TransactionCategory.transport: return Icons.directions_car;
-      case TransactionCategory.shopping: return Icons.shopping_bag;
-      case TransactionCategory.services: return Icons.bolt;
-      case TransactionCategory.entertainment: return Icons.local_activity;
-      case TransactionCategory.health: return Icons.local_hospital;
-      case TransactionCategory.education: return Icons.school;
-      case TransactionCategory.salary: return Icons.payments;
-      case TransactionCategory.freelance: return Icons.code;
-      case TransactionCategory.investment: return Icons.trending_up;
-      case TransactionCategory.rental: return Icons.home;
-      case TransactionCategory.gift: return Icons.card_giftcard;
-      case TransactionCategory.income: return Icons.payments;
-      case TransactionCategory.other: return Icons.more_horiz;
-    }
+class _CategoryListTile extends StatelessWidget {
+  final String name;
+  final String iconName;
+  final String colorHex;
+  final bool hasCustomLabel;
+  final VoidCallback onEdit;
+  final VoidCallback? onReset;
+  final VoidCallback? onDelete;
+
+  const _CategoryListTile({
+    required this.name,
+    required this.iconName,
+    required this.colorHex,
+    this.hasCustomLabel = false,
+    required this.onEdit,
+    this.onReset,
+    this.onDelete,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final color = _colorFromHex(colorHex);
+    return Card(
+      margin: const EdgeInsets.only(bottom: 8),
+      child: ListTile(
+        leading: Container(
+          width: 44,
+          height: 44,
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.2),
+            borderRadius: BorderRadius.circular(22),
+          ),
+          child: Icon(
+            _iconDataFromName(iconName),
+            size: 20,
+            color: color,
+          ),
+        ),
+        title: Text(name),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            IconButton(
+              icon: const Icon(Icons.edit_outlined, size: 20),
+              onPressed: onEdit,
+            ),
+            if (onReset != null)
+              IconButton(
+                icon: const Icon(Icons.restore_outlined, size: 20),
+                onPressed: onReset,
+              ),
+            if (onDelete != null)
+              IconButton(
+                icon: const Icon(Icons.delete_outline, size: 20, color: AppColors.error),
+                onPressed: onDelete,
+              ),
+          ],
+        ),
+      ),
+    );
   }
 }

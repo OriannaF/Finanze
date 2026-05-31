@@ -11,6 +11,7 @@ import 'providers/theme_provider.dart';
 import 'providers/transaction_provider.dart';
 import 'providers/goal_provider.dart';
 import 'providers/settings_provider.dart';
+import 'providers/account_provider.dart';
 import 'theme/app_theme.dart';
 import 'router/app_router.dart';
 
@@ -28,7 +29,7 @@ void main() async {
     await prefs.setBool('mockDataCleaned', true);
   }
 
-  final onboardingCompleted = prefs.getBool('onboardingCompleted') ?? false;
+  await db.generateRecurringTransactions();
 
   runApp(
     DevicePreview(
@@ -39,8 +40,9 @@ void main() async {
           ChangeNotifierProvider(create: (_) => TransactionProvider()),
           ChangeNotifierProvider(create: (_) => GoalProvider()),
           ChangeNotifierProvider(create: (_) => SettingsProvider()),
+          ChangeNotifierProvider(create: (_) => AccountProvider()),
         ],
-        child: FinanzeApp(initialRoute: onboardingCompleted ? '/' : '/onboarding'),
+        child: const FinanzeApp(initialRoute: '/onboarding'),
       ),
     ),
   );

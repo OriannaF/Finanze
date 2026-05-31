@@ -18,6 +18,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   int _currentPage = 0;
 
   final TextEditingController _nameController = TextEditingController();
+  final FocusNode _nameFocusNode = FocusNode();
   String? _selectedGoal;
   String? _selectedFrequency;
   bool? _selectedWantsGoal;
@@ -28,6 +29,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   void dispose() {
     _pageController.dispose();
     _nameController.dispose();
+    _nameFocusNode.dispose();
     super.dispose();
   }
 
@@ -273,6 +275,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 controller: _pageController,
                 onPageChanged: (page) {
                   setState(() => _currentPage = page);
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    _nameFocusNode.unfocus();
+                  });
                 },
                 children: [
                   _buildWelcomePage(),
@@ -296,25 +301,28 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   Widget _buildTopBar() {
     return Padding(
       padding: const EdgeInsets.fromLTRB(24, 16, 16, 8),
-      child: Row(
-        children: [
-          Expanded(child: _buildProgressBar()),
-          if (_currentPage >= 2 && _currentPage < _totalPages - 1)
-            GestureDetector(
-              onTap: _skip,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                child: Text(
-                  'Saltar',
-                  style: TextStyle(
-                    color: AppColors.onSurfaceVariant,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
+      child: SizedBox(
+        height: 24,
+        child: Row(
+          children: [
+            Expanded(child: _buildProgressBar()),
+            if (_currentPage >= 2 && _currentPage < _totalPages - 1)
+              GestureDetector(
+                onTap: _skip,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  child: Text(
+                    'Saltar',
+                    style: TextStyle(
+                      color: AppColors.onSurfaceVariant,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
                 ),
               ),
-            ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -463,6 +471,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           const SizedBox(height: 32),
           TextField(
             controller: _nameController,
+            focusNode: _nameFocusNode,
             onChanged: (_) => setState(() {}),
             textAlign: TextAlign.center,
             style: TextStyle(

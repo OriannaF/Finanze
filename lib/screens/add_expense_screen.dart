@@ -4,9 +4,51 @@ import 'package:provider/provider.dart';
 import '../data/database_helper.dart';
 import '../models/account.dart';
 import '../models/transaction.dart';
+import '../providers/settings_provider.dart';
 import '../providers/transaction_provider.dart';
 import '../theme/app_colors.dart';
 import '../widgets/segmented_control.dart';
+
+const List<String> _allCategoryIcons = [
+  'restaurant', 'directions_car', 'shopping_bag', 'bolt', 'local_activity',
+  'local_hospital', 'school', 'payments', 'code', 'trending_up', 'home',
+  'card_giftcard', 'more_horiz', 'flight_takeoff', 'savings', 'shopping_cart',
+  'favorite', 'pets', 'devices', 'fitness_center', 'book', 'wallet', 'money',
+];
+
+Color _colorFromHex(String hex) {
+  hex = hex.replaceFirst('#', '');
+  return Color(int.parse('FF$hex', radix: 16));
+}
+
+IconData _iconFromName(String name) {
+  const map = {
+    'restaurant': Icons.restaurant,
+    'directions_car': Icons.directions_car,
+    'shopping_bag': Icons.shopping_bag,
+    'bolt': Icons.bolt,
+    'local_activity': Icons.local_activity,
+    'local_hospital': Icons.local_hospital,
+    'school': Icons.school,
+    'payments': Icons.payments,
+    'code': Icons.code,
+    'trending_up': Icons.trending_up,
+    'home': Icons.home,
+    'card_giftcard': Icons.card_giftcard,
+    'more_horiz': Icons.more_horiz,
+    'flight_takeoff': Icons.flight_takeoff,
+    'savings': Icons.savings,
+    'shopping_cart': Icons.shopping_cart,
+    'favorite': Icons.favorite,
+    'pets': Icons.pets,
+    'devices': Icons.devices,
+    'fitness_center': Icons.fitness_center,
+    'book': Icons.book,
+    'wallet': Icons.wallet,
+    'money': Icons.money,
+  };
+  return map[name] ?? Icons.more_horiz;
+}
 
 class TransactionDetailScreen extends StatefulWidget {
   final double amount;
@@ -20,15 +62,18 @@ class TransactionDetailScreen extends StatefulWidget {
 class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
   TransactionType _transactionType = TransactionType.expense;
   TransactionCategory _selectedCategory = TransactionCategory.food;
+  String _selectedCustomCategory = '';
   Account? _selectedAccount;
   final TextEditingController _noteController = TextEditingController();
-  final DateTime _selectedDate = DateTime.now();
+  late DateTime _selectedDate;
+  RecurringInterval _recurringInterval = RecurringInterval.none;
   bool _isSaving = false;
   List<Account> _accounts = [];
 
   @override
   void initState() {
     super.initState();
+    _selectedDate = DateTime.now();
     _loadAccounts();
   }
 
@@ -39,12 +84,26 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
     }
   }
 
+  Future<void> _pickDate() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _selectedDate,
+      firstDate: DateTime(2000),
+      lastDate: DateTime.now().add(const Duration(days: 365)),
+      locale: const Locale('es'),
+    );
+    if (picked != null && mounted) {
+      setState(() => _selectedDate = picked);
+    }
+  }
+
   void _onTypeChanged(int index) {
     setState(() {
       _transactionType = index == 0 ? TransactionType.expense : TransactionType.income;
       _selectedCategory = _transactionType == TransactionType.expense
           ? TransactionCategory.food
           : TransactionCategory.salary;
+      _selectedCustomCategory = '';
     });
   }
 
@@ -72,6 +131,8 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
       type: _transactionType,
       date: _selectedDate,
       note: _noteController.text,
+      customCategoryName: _selectedCustomCategory,
+      recurringInterval: _recurringInterval,
     );
 
     await context.read<TransactionProvider>().addTransaction(tx);
@@ -138,6 +199,102 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
     }
     return '\$${amount.toStringAsFixed(2).replaceAll('.', ',')}';
   }
+
+  void _showCreateCustomCategory(BuildContext context) {
+    final nameCtrl = TextEditingController();
+    String selectedIcon = 'more_horiz';
+    String selectedColor = '#757575';
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          title: const Text('Nueva categoría'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                TextField(
+                  controller: nameCtrl,
+                  autofocus: true,
+                  decoration: const InputDecoration(
+                    hintText: 'Nombre',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Text('Ícono', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: AppColors.onSurfaceVariant)),
+                const SizedBox(height: 8),
+                SizedBox(
+                  height: 56,
+                  child: ListView(
+                    scrollDirection: Axis.horizontal,
+                    children: _allCategoryIcons.map((iconName) {
+                      final isSel = selectedIcon == iconName;
+                      return GestureDetector(
+                        onTap: () => setDialogState(() => selectedIcon = iconName),
+                        child: Container(
+                          width: 52, height: 52,
+                          margin: const EdgeInsets.only(right: 8),
+                          decoration: BoxDecoration(
+                            color: isSel ? _colorFromHex(selectedColor) : _colorFromHex(selectedColor).withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(26),
+                          ),
+                          child: Icon(
+                            _iconFromName(iconName),
+                            size: 22,
+                            color: isSel ? Colors.white : _colorFromHex(selectedColor),
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Text('Color', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: AppColors.onSurfaceVariant)),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: accountColors.map((c) {
+                    final hex = '#${c.toARGB32().toRadixString(16).substring(2).toUpperCase()}';
+                    final isSel = selectedColor == hex;
+                    return GestureDetector(
+                      onTap: () => setDialogState(() { selectedColor = hex; }),
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        width: 36, height: 36,
+                        decoration: BoxDecoration(
+                          color: c,
+                          borderRadius: BorderRadius.circular(18),
+                          border: isSel ? Border.all(color: AppColors.primary, width: 3) : null,
+                        ),
+                        child: isSel ? const Icon(Icons.check, color: Colors.white, size: 18) : null,
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancelar')),
+            FilledButton(
+              onPressed: () {
+                final name = nameCtrl.text.trim();
+                if (name.isEmpty) return;
+                context.read<SettingsProvider>().addCustomCategory(name, selectedIcon, selectedColor);
+                Navigator.pop(ctx);
+              },
+              child: const Text('Crear'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -220,13 +377,85 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
                           height: 80,
                           child: ListView(
                             scrollDirection: Axis.horizontal,
-                            children: _availableCategories
-                                .map((cat) => _CategoryButton(
-                                  category: cat,
-                                  isSelected: cat == _selectedCategory,
-                                  onTap: () => setState(() => _selectedCategory = cat),
-                                ))
-                                .toList(),
+                            children: [
+                            ..._availableCategories.map((cat) => _CategoryButton(
+                              category: cat,
+                              isSelected: _selectedCustomCategory.isEmpty && cat == _selectedCategory,
+                              onTap: () => setState(() {
+                                _selectedCategory = cat;
+                                _selectedCustomCategory = '';
+                              }),
+                            )),
+                            ...context.watch<SettingsProvider>().customCategories.entries.map((entry) {
+                              final catColor = _colorFromHex(entry.value['color'] ?? '#757575');
+                              final isSelected = _selectedCustomCategory == entry.key;
+                              return GestureDetector(
+                                onTap: () => setState(() {
+                                  _selectedCategory = TransactionCategory.other;
+                                  _selectedCustomCategory = entry.key;
+                                }),
+                                child: Container(
+                                  width: 60,
+                                  margin: const EdgeInsets.only(right: 12),
+                                  child: Column(
+                                    children: [
+                                      AnimatedContainer(
+                                        duration: const Duration(milliseconds: 200),
+                                        width: 56, height: 56,
+                                        decoration: BoxDecoration(
+                                          color: isSelected ? catColor : catColor.withValues(alpha: 0.15),
+                                          borderRadius: BorderRadius.circular(28),
+                                        ),
+                                        child: Icon(
+                                          _iconFromName(entry.value['icon'] ?? 'more_horiz'),
+                                          size: 24,
+                                          color: isSelected ? Colors.white : catColor,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        entry.key,
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          color: isSelected ? catColor : AppColors.onSurfaceVariant,
+                                          fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                                        ),
+                                        textAlign: TextAlign.center,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            }),
+                            GestureDetector(
+                              onTap: () => _showCreateCustomCategory(context),
+                              child: Container(
+                                width: 60,
+                                margin: const EdgeInsets.only(right: 12),
+                                child: Column(
+                                  children: [
+                                    Container(
+                                      width: 56, height: 56,
+                                      decoration: BoxDecoration(
+                                        color: AppColors.surfaceContainer,
+                                        borderRadius: BorderRadius.circular(28),
+                                        border: Border.all(color: AppColors.outlineVariant, width: 2),
+                                      ),
+                                      child: const Icon(Icons.add, color: AppColors.onSurfaceVariant, size: 24),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      'Nueva',
+                                      style: TextStyle(fontSize: 11, color: AppColors.onSurfaceVariant),
+                                      textAlign: TextAlign.center,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
                           ),
                         ),
                         const Divider(height: 28),
@@ -278,7 +507,9 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
                           ],
                         ),
                         const Divider(height: 28),
-                        Row(
+                        GestureDetector(
+                          onTap: _pickDate,
+                          child: Row(
                           children: [
                             Container(
                               width: 40,
@@ -304,6 +535,82 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
                               style: Theme.of(context).textTheme.labelMedium,
                             ),
                           ],
+                        ),
+                        ),
+                        const Divider(height: 28),
+                        GestureDetector(
+                          onTap: () {
+                            showModalBottomSheet(
+                              context: context,
+                              shape: const RoundedRectangleBorder(
+                                borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+                              ),
+                              builder: (ctx) => SafeArea(
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(vertical: 16),
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const Padding(
+                                        padding: EdgeInsets.only(bottom: 12),
+                                        child: Text('Repetir', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600)),
+                                      ),
+                                      ...RecurringInterval.values.map((ri) {
+                                        final label = switch (ri) {
+                                          RecurringInterval.none => 'No repetir',
+                                          RecurringInterval.daily => 'Cada d\u00eda',
+                                          RecurringInterval.weekly => 'Cada semana',
+                                          RecurringInterval.monthly => 'Cada mes',
+                                          RecurringInterval.yearly => 'Cada a\u00f1o',
+                                        };
+                                        return Column(
+                                          children: [
+                                            const Divider(height: 1),
+                                            ListTile(
+                                              leading: Icon(
+                                                _recurringInterval == ri ? Icons.radio_button_checked : Icons.radio_button_off,
+                                                color: AppColors.primary,
+                                              ),
+                                              title: Text(label, style: TextStyle(fontWeight: _recurringInterval == ri ? FontWeight.w600 : FontWeight.w400)),
+                                              onTap: () {
+                                                setState(() => _recurringInterval = ri);
+                                                Navigator.pop(ctx);
+                                              },
+                                            ),
+                                          ],
+                                        );
+                                      }),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
+                          child: Row(
+                          children: [
+                            Container(
+                              width: 40, height: 40,
+                              decoration: BoxDecoration(
+                                color: AppColors.surfaceContainerLow,
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: const Icon(Icons.repeat, size: 20, color: AppColors.onSurfaceVariant),
+                            ),
+                            const SizedBox(width: 12),
+                            Text(
+                              _recurringInterval == RecurringInterval.none ? 'No repetir' : switch (_recurringInterval) {
+                                RecurringInterval.daily => 'Cada d\u00eda',
+                                RecurringInterval.weekly => 'Cada semana',
+                                RecurringInterval.monthly => 'Cada mes',
+                                RecurringInterval.yearly => 'Cada a\u00f1o',
+                                RecurringInterval.none => 'No repetir',
+                              },
+                              style: Theme.of(context).textTheme.bodyLarge,
+                            ),
+                            const Spacer(),
+                            const Icon(Icons.chevron_right, size: 20, color: AppColors.outlineVariant),
+                          ],
+                        ),
                         ),
                         const Divider(height: 28),
                         Row(

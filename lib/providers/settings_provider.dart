@@ -2,14 +2,17 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/transaction.dart';
+import '../utils/currency_formatter.dart' as formatter;
 
 class SettingsProvider extends ChangeNotifier {
   String _currency = 'ARS';
+  String _numberLocale = 'es_AR';
   double _monthlyBudgetLimit = 0;
   int? _defaultAccountId;
   String _dateFormat = 'DD/MM';
   String _weekStartDay = 'Lunes';
   Map<String, String> _customCategoryLabels = {};
+  Map<String, Map<String, String>> _customCategories = {};
   bool _onboardingCompleted = false;
   String? _onboardingGoal;
   String? _onboardingFrequency;
@@ -17,11 +20,13 @@ class SettingsProvider extends ChangeNotifier {
   String _userName = '';
 
   String get currency => _currency;
+  String get numberLocale => _numberLocale;
   double get monthlyBudgetLimit => _monthlyBudgetLimit;
   int? get defaultAccountId => _defaultAccountId;
   String get dateFormat => _dateFormat;
   String get weekStartDay => _weekStartDay;
   Map<String, String> get customCategoryLabels => _customCategoryLabels;
+  Map<String, Map<String, String>> get customCategories => _customCategories;
   bool get onboardingCompleted => _onboardingCompleted;
   String? get onboardingGoal => _onboardingGoal;
   String? get onboardingFrequency => _onboardingFrequency;
@@ -29,11 +34,13 @@ class SettingsProvider extends ChangeNotifier {
   String get userName => _userName;
 
   static const _keyCurrency = 'currency';
+  static const _keyNumberLocale = 'numberLocale';
   static const _keyBudgetLimit = 'monthlyBudgetLimit';
   static const _keyDefaultAccount = 'defaultAccountId';
   static const _keyDateFormat = 'dateFormat';
   static const _keyWeekStart = 'weekStartDay';
   static const _keyCategoryLabels = 'customCategoryLabels';
+  static const _keyCustomCategories = 'customCategories';
   static const _keyOnboardingCompleted = 'onboardingCompleted';
   static const _keyOnboardingGoal = 'onboardingGoal';
   static const _keyOnboardingFrequency = 'onboardingFrequency';
@@ -47,6 +54,8 @@ class SettingsProvider extends ChangeNotifier {
   Future<void> _load() async {
     final prefs = await SharedPreferences.getInstance();
     _currency = prefs.getString(_keyCurrency) ?? 'ARS';
+    _numberLocale = prefs.getString(_keyNumberLocale) ?? 'es_AR';
+    formatter.setNumberLocale(_numberLocale);
     _monthlyBudgetLimit = prefs.getDouble(_keyBudgetLimit) ?? 0;
     _defaultAccountId = prefs.getInt(_keyDefaultAccount);
     _dateFormat = prefs.getString(_keyDateFormat) ?? 'DD/MM';
@@ -54,6 +63,12 @@ class SettingsProvider extends ChangeNotifier {
     final labelsJson = prefs.getString(_keyCategoryLabels);
     if (labelsJson != null) {
       _customCategoryLabels = Map<String, String>.from(jsonDecode(labelsJson));
+    }
+    final catsJson = prefs.getString(_keyCustomCategories);
+    if (catsJson != null) {
+      final decoded = jsonDecode(catsJson);
+      _customCategories = (decoded as Map<String, dynamic>).map((k, v) =>
+          MapEntry(k, Map<String, String>.from(v as Map)));
     }
     _onboardingCompleted = prefs.getBool(_keyOnboardingCompleted) ?? false;
     _onboardingGoal = prefs.getString(_keyOnboardingGoal);
@@ -67,6 +82,14 @@ class SettingsProvider extends ChangeNotifier {
     _currency = value;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_keyCurrency, value);
+    notifyListeners();
+  }
+
+  Future<void> updateNumberLocale(String value) async {
+    _numberLocale = value;
+    formatter.setNumberLocale(value);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_keyNumberLocale, value);
     notifyListeners();
   }
 
@@ -117,6 +140,30 @@ class SettingsProvider extends ChangeNotifier {
   Future<void> _saveCategoryLabels() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_keyCategoryLabels, jsonEncode(_customCategoryLabels));
+  }
+
+  Future<void> addCustomCategory(String name, String icon, String color) async {
+    _customCategories[name] = {'icon': icon, 'color': color};
+    await _saveCustomCategories();
+    notifyListeners();
+  }
+
+  Future<void> editCustomCategory(String oldName, String newName, String icon, String color) async {
+    _customCategories.remove(oldName);
+    _customCategories[newName] = {'icon': icon, 'color': color};
+    await _saveCustomCategories();
+    notifyListeners();
+  }
+
+  Future<void> deleteCustomCategory(String name) async {
+    _customCategories.remove(name);
+    await _saveCustomCategories();
+    notifyListeners();
+  }
+
+  Future<void> _saveCustomCategories() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_keyCustomCategories, jsonEncode(_customCategories));
   }
 
   String getCategoryLabel(TransactionCategory cat) {

@@ -9,6 +9,8 @@ import '../screens/settings_screen.dart';
 import '../screens/amount_screen.dart';
 import '../screens/add_expense_screen.dart';
 import '../screens/onboarding_screen.dart';
+import '../screens/account_settings_screen.dart';
+import '../screens/account_detail_screen.dart';
 
 final GlobalKey<NavigatorState> _rootNavigatorKey = GlobalKey<NavigatorState>();
 
@@ -87,6 +89,21 @@ GoRouter createRouter({String initialRoute = '/'}) {
         path: '/onboarding',
         parentNavigatorKey: _rootNavigatorKey,
         builder: (context, state) => const OnboardingScreen(),
+      ),
+      GoRoute(
+        path: '/account-settings',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const AccountSettingsScreen(),
+      ),
+      GoRoute(
+        path: '/account-detail',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) {
+          final id = int.tryParse(
+            state.uri.queryParameters['id'] ?? '',
+          ) ?? 0;
+          return AccountDetailScreen(accountId: id);
+        },
       ),
     ],
   );

@@ -25,7 +25,7 @@ class DatabaseHelper {
     return await databaseFactoryFfi.openDatabase(
       path,
       options: OpenDatabaseOptions(
-        version: 4,
+        version: 9,
         onCreate: (db, version) => _onCreate(db, version),
         onUpgrade: (db, oldVersion, newVersion) =>
             _onUpgrade(db, oldVersion, newVersion),
@@ -43,7 +43,11 @@ class DatabaseHelper {
         category TEXT NOT NULL,
         type TEXT NOT NULL DEFAULT 'expense',
         date TEXT NOT NULL,
-        note TEXT DEFAULT ''
+        note TEXT DEFAULT '',
+        customCategoryName TEXT DEFAULT '',
+        recurring_interval TEXT DEFAULT 'none',
+        recurring_end_date TEXT,
+        parent_recurring_id INTEGER
       )
     ''');
     await db.execute('''
@@ -65,7 +69,9 @@ class DatabaseHelper {
         budget_limit REAL NOT NULL,
         spent REAL DEFAULT 0,
         month INTEGER NOT NULL,
-        year INTEGER NOT NULL
+        year INTEGER NOT NULL,
+        icon TEXT DEFAULT 'more_horiz',
+        color TEXT DEFAULT '#1E88E5'
       )
     ''');
     await db.execute('''
@@ -74,7 +80,9 @@ class DatabaseHelper {
         name TEXT NOT NULL,
         balance REAL NOT NULL,
         type TEXT NOT NULL,
-        icon TEXT DEFAULT 'account_balance_wallet'
+        icon TEXT DEFAULT 'account_balance_wallet',
+        color TEXT DEFAULT '#1E88E5',
+        is_counted_in_total INTEGER NOT NULL DEFAULT 1
       )
     ''');
     await db.execute('''
@@ -116,6 +124,40 @@ class DatabaseHelper {
         )
       ''');
     }
+    if (oldVersion < 5) {
+      await db.execute(
+        'ALTER TABLE accounts ADD COLUMN is_counted_in_total INTEGER NOT NULL DEFAULT 1'
+      );
+    }
+    if (oldVersion < 6) {
+      await db.execute(
+        "ALTER TABLE accounts ADD COLUMN color TEXT NOT NULL DEFAULT '#1E88E5'"
+      );
+    }
+    if (oldVersion < 7) {
+      await db.execute(
+        "ALTER TABLE transactions ADD COLUMN customCategoryName TEXT DEFAULT ''"
+      );
+    }
+    if (oldVersion < 8) {
+      await db.execute(
+        "ALTER TABLE transactions ADD COLUMN recurring_interval TEXT DEFAULT 'none'"
+      );
+      await db.execute(
+        'ALTER TABLE transactions ADD COLUMN recurring_end_date TEXT'
+      );
+      await db.execute(
+        'ALTER TABLE transactions ADD COLUMN parent_recurring_id INTEGER'
+      );
+    }
+    if (oldVersion < 9) {
+      await db.execute(
+        "ALTER TABLE budgets ADD COLUMN icon TEXT DEFAULT 'more_horiz'"
+      );
+      await db.execute(
+        "ALTER TABLE budgets ADD COLUMN color TEXT DEFAULT '#1E88E5'"
+      );
+    }
   }
 
   // Transactions
@@ -146,6 +188,13 @@ class DatabaseHelper {
   Future<void> insertTransaction(Transaction t) async {
     final db = await database;
     await db.insert('transactions', t.toMap());
+  }
+
+  Future<void> updateTransaction(Transaction t) async {
+    final db = await database;
+    final map = t.toMap();
+    map.remove('id');
+    await db.update('transactions', map, where: 'id = ?', whereArgs: [t.id]);
   }
 
   Future<void> deleteTransaction(int id) async {
@@ -223,6 +272,101 @@ class DatabaseHelper {
     await db.update('budgets', b.toMap(), where: 'id = ?', whereArgs: [b.id]);
   }
 
+  Future<void> deleteBudget(int id) async {
+    final db = await database;
+    await db.delete('budgets', where: 'id = ?', whereArgs: [id]);
+  }
+
+  Future<void> recalculateBudgetSpent({int? month, int? year}) async {
+    final db = await database;
+    final now = DateTime.now();
+    final m = month ?? now.month;
+    final y = year ?? now.year;
+
+    final firstDay = DateTime(y, m, 1);
+    final lastDay = DateTime(y, m + 1, 0, 23, 59, 59);
+
+    final budgets = await getBudgets(month: m, year: y);
+    for (final b in budgets) {
+      if (b.category == null) continue;
+      final maps = await db.query(
+        'transactions',
+        where: 'category = ? AND type = ? AND date >= ? AND date <= ?',
+        whereArgs: [b.category!.name, 'expense', firstDay.toIso8601String(), lastDay.toIso8601String()],
+      );
+      final spent = maps.fold(0.0, (sum, m) => sum + (m['amount'] as num).toDouble());
+      await db.update(
+        'budgets',
+        {'spent': spent},
+        where: 'id = ?',
+        whereArgs: [b.id],
+      );
+    }
+  }
+
+  Future<int> generateRecurringTransactions() async {
+    final db = await database;
+    final now = DateTime.now();
+    int created = 0;
+
+    final recurringTxMaps = await db.query(
+      'transactions',
+      where: "recurring_interval != 'none' AND (recurring_end_date IS NULL OR recurring_end_date >= ?)",
+      whereArgs: [now.toIso8601String()],
+    );
+
+    for (final map in recurringTxMaps) {
+      final tx = Transaction.fromMap(map);
+      if (tx.id == null) continue;
+      DateTime nextDate;
+      switch (tx.recurringInterval) {
+        case RecurringInterval.daily:
+          nextDate = tx.date.add(const Duration(days: 1));
+        case RecurringInterval.weekly:
+          nextDate = tx.date.add(const Duration(days: 7));
+        case RecurringInterval.monthly:
+          nextDate = DateTime(tx.date.year, tx.date.month + 1, tx.date.day);
+        case RecurringInterval.yearly:
+          nextDate = DateTime(tx.date.year + 1, tx.date.month, tx.date.day);
+        default:
+          continue;
+      }
+
+      while (!nextDate.isAfter(now)) {
+        if (tx.recurringEndDate != null && nextDate.isAfter(tx.recurringEndDate!)) break;
+
+        await db.insert('transactions', {
+          'accountId': tx.accountId,
+          'title': tx.title,
+          'amount': tx.amount,
+          'category': tx.category.name,
+          'type': tx.type.name,
+          'date': nextDate.toIso8601String(),
+          'note': tx.note,
+          'customCategoryName': tx.customCategoryName,
+          'recurring_interval': 'none',
+          'parent_recurring_id': tx.id,
+        });
+        created++;
+
+        switch (tx.recurringInterval) {
+          case RecurringInterval.daily:
+            nextDate = nextDate.add(const Duration(days: 1));
+          case RecurringInterval.weekly:
+            nextDate = nextDate.add(const Duration(days: 7));
+          case RecurringInterval.monthly:
+            nextDate = DateTime(nextDate.year, nextDate.month + 1, nextDate.day);
+          case RecurringInterval.yearly:
+            nextDate = DateTime(nextDate.year + 1, nextDate.month, nextDate.day);
+          default:
+            break;
+        }
+      }
+    }
+
+    return created;
+  }
+
   // Bulk operations
   Future<Map<String, List<Map<String, dynamic>>>> exportAllData() async {
     final db = await database;
@@ -288,6 +432,35 @@ class DatabaseHelper {
   Future<int> insertAccount(Account account) async {
     final db = await database;
     return await db.insert('accounts', account.toMap());
+  }
+
+  Future<void> updateAccount(Account account) async {
+    final db = await database;
+    await db.update(
+      'accounts',
+      account.toMap(),
+      where: 'id = ?',
+      whereArgs: [account.id],
+    );
+  }
+
+  Future<void> deleteAccount(int id) async {
+    final db = await database;
+    await db.transaction((txn) async {
+      await txn.delete('transactions', where: 'accountId = ?', whereArgs: [id]);
+      await txn.delete('accounts', where: 'id = ?', whereArgs: [id]);
+    });
+  }
+
+  Future<List<Transaction>> getTransactionsByAccount(int accountId) async {
+    final db = await database;
+    final maps = await db.query(
+      'transactions',
+      where: 'accountId = ?',
+      whereArgs: [accountId],
+      orderBy: 'date DESC',
+    );
+    return maps.map((m) => Transaction.fromMap(m)).toList();
   }
 
   // Stats

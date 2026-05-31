@@ -8,6 +8,8 @@ class Budget {
   final double spent;
   final int month;
   final int year;
+  final String icon;
+  final String color;
 
   Budget({
     this.id,
@@ -17,6 +19,8 @@ class Budget {
     this.spent = 0,
     int? month,
     int? year,
+    this.icon = 'more_horiz',
+    this.color = '#1E88E5',
   }) : month = month ?? DateTime.now().month,
        year = year ?? DateTime.now().year;
 
@@ -32,6 +36,8 @@ class Budget {
     'spent': spent,
     'month': month,
     'year': year,
+    'icon': icon,
+    'color': color,
   };
 
   factory Budget.fromMap(Map<String, dynamic> map) => Budget(
@@ -47,6 +53,8 @@ class Budget {
     spent: (map['spent'] as num).toDouble(),
     month: map['month'] as int? ?? DateTime.now().month,
     year: map['year'] as int? ?? DateTime.now().year,
+    icon: map['icon'] as String? ?? 'more_horiz',
+    color: map['color'] as String? ?? '#1E88E5',
   );
 
   Budget copyWith({
@@ -57,6 +65,8 @@ class Budget {
     double? spent,
     int? month,
     int? year,
+    String? icon,
+    String? color,
   }) => Budget(
     id: id ?? this.id,
     categoryName: categoryName ?? this.categoryName,
@@ -65,5 +75,7 @@ class Budget {
     spent: spent ?? this.spent,
     month: month ?? this.month,
     year: year ?? this.year,
+    icon: icon ?? this.icon,
+    color: color ?? this.color,
   );
 }

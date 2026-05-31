@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../providers/goal_provider.dart';
 import '../theme/app_colors.dart';
 import '../utils/currency_formatter.dart';
 import '../widgets/progress_bar.dart';
+import '../widgets/segmented_control.dart';
 import '../models/goal.dart';
 import '../models/budget.dart';
+import '../models/transaction.dart';
 
 class GoalsScreen extends StatefulWidget {
   const GoalsScreen({super.key});
@@ -29,107 +32,148 @@ class _GoalsScreenState extends State<GoalsScreen> {
     return Consumer<GoalProvider>(
       builder: (context, provider, _) {
         return SafeArea(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const SizedBox(height: 16),
-                // Header
-                Stack(
+          child: Stack(
+            children: [
+              SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 100),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Center(
-                      child: Text(
-                        'Metas activas',
-                        style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                          fontSize: 20,
+                    const SizedBox(height: 44),
+                    // Goals list
+                    if (provider.goals.isEmpty)
+                      Container(
+                        padding: const EdgeInsets.all(24),
+                        decoration: BoxDecoration(
+                          color: AppColors.surfaceContainerLowest,
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.04),
+                              blurRadius: 20,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
                         ),
+                        child: const Center(
+                          child: Text(
+                            'No hay metas aún. ¡Crea una!',
+                            style: TextStyle(color: AppColors.onSurfaceVariant),
+                          ),
+                        ),
+                      )
+                    else
+                      ...provider.goals.map((goal) => _GoalCard(
+                        goal: goal,
+                        onTap: () => _showGoalDetail(context, goal),
+                      )),
+                    const SizedBox(height: 32),
+                    // Monthly Budget
+                    Text(
+                      'Presupuesto mensual',
+                      style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                        fontSize: 20,
                       ),
                     ),
-                    Positioned(
-                      right: 0,
-                      child: GestureDetector(
-                        onTap: () => _showCreateGoalSheet(context),
-                        child: Container(
-                          width: 32,
-                          height: 32,
-                          decoration: BoxDecoration(
-                            color: AppColors.surfaceContainer,
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                          child: const Icon(
-                            Icons.add,
-                            size: 20,
-                            color: AppColors.primary,
-                          ),
+                    const SizedBox(height: 16),
+                    // Budget list
+                    if (provider.budgets.isEmpty)
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(24),
+                        decoration: BoxDecoration(
+                          color: AppColors.surfaceContainerLowest,
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.04),
+                              blurRadius: 20,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          children: [
+                            Image.asset(
+                              'assets/images/zoe_anteojos.png',
+                              width: 120,
+                              height: 120,
+                            ),
+                            const SizedBox(height: 16),
+                            Text(
+                              'Controlá tus gastos como un pro:\ncon un presupuesto mensual, limitá tus gastos\ny ahorrá para las cosas importantes',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: AppColors.onSurfaceVariant,
+                                height: 1.4,
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
+                    else
+                      Container(
+                        decoration: BoxDecoration(
+                          color: AppColors.surfaceContainerLowest,
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.04),
+                              blurRadius: 20,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          children: provider.budgets.map((budget) {
+                            final isLast = budget == provider.budgets.last;
+                            return _BudgetItem(
+                              budget: budget,
+                              isLast: isLast,
+                            );
+                          }).toList(),
+                        ),
+                      ),
+                    const SizedBox(height: 32),
+                  ],
+                ),
+              ),
+              // Header and add button
+              Positioned(
+                top: 0,
+                left: 0,
+                right: 20,
+                child: Row(
+                  children: [
+                    const Spacer(),
+                    Text(
+                      'Metas activas',
+                      style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                        fontSize: 20,
+                      ),
+                    ),
+                    const Spacer(),
+                    GestureDetector(
+                      onTap: () => _showCreateSheet(context),
+                      child: Container(
+                        width: 36,
+                        height: 36,
+                        decoration: BoxDecoration(
+                          color: AppColors.surfaceContainerHigh.withValues(alpha: 0.5),
+                          borderRadius: BorderRadius.circular(18),
+                        ),
+                        child: const Icon(
+                          Icons.add,
+                          size: 20,
+                          color: AppColors.primary,
                         ),
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 16),
-                // Goals list
-                if (provider.goals.isEmpty)
-                  Container(
-                    padding: const EdgeInsets.all(24),
-                    decoration: BoxDecoration(
-                      color: AppColors.surfaceContainerLowest,
-                      borderRadius: BorderRadius.circular(16),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.04),
-                          blurRadius: 20,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: const Center(
-                      child: Text(
-                        'No hay metas aún. ¡Crea una!',
-                        style: TextStyle(color: AppColors.onSurfaceVariant),
-                      ),
-                    ),
-                  )
-                else
-                  ...provider.goals.map((goal) => _GoalCard(
-                    goal: goal,
-                    onTap: () => _showGoalDetail(context, goal),
-                  )),
-                const SizedBox(height: 32),
-                // Monthly Budget
-                Text(
-                  'Presupuesto mensual',
-                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                    fontSize: 20,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                // Budget list
-                Container(
-                  decoration: BoxDecoration(
-                    color: AppColors.surfaceContainerLowest,
-                    borderRadius: BorderRadius.circular(16),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.04),
-                        blurRadius: 20,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: Column(
-                    children: provider.budgets.map((budget) {
-                      final isLast = budget == provider.budgets.last;
-                      return _BudgetItem(
-                        budget: budget,
-                        isLast: isLast,
-                      );
-                    }).toList(),
-                  ),
-                ),
-                const SizedBox(height: 32),
-              ],
-            ),
+              ),
+            ],
           ),
         );
       },
@@ -174,122 +218,481 @@ class _GoalsScreenState extends State<GoalsScreen> {
     return _goalIconMap.entries.firstWhere((e) => e.value == icon, orElse: () => _goalIconMap.entries.first).key;
   }
 
-  void _showCreateGoalSheet(BuildContext context) {
+  void _showCreateSheet(BuildContext context) {
+    int selectedType = 0;
     final titleCtrl = TextEditingController();
     final amountCtrl = TextEditingController();
-    IconData selectedIcon = Icons.flight_takeoff;
+    String selectedIcon = 'flight_takeoff';
+    String selectedColor = '#1E88E5';
     DateTime selectedDate = DateTime.now().add(const Duration(days: 30));
+    TransactionCategory selectedBudgetCat = TransactionCategory.food;
+    String selectedBudgetIcon = 'shopping_cart';
+    String selectedBudgetColor = '#43A047';
 
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setSheetState) => Padding(
           padding: EdgeInsets.only(
-            left: 20, right: 20, top: 20,
+            left: 20, right: 20, top: 8,
             bottom: MediaQuery.of(ctx).viewInsets.bottom + 20,
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Center(child: Text('Nueva meta', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600))),
-              const SizedBox(height: 20),
-              TextField(
-                controller: titleCtrl,
-                decoration: const InputDecoration(
-                  labelText: 'Nombre',
-                  border: OutlineInputBorder(),
+              // Drag handle
+              Container(
+                width: 40, height: 4,
+                decoration: BoxDecoration(
+                  color: AppColors.surfaceVariant,
+                  borderRadius: BorderRadius.circular(2),
                 ),
               ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: amountCtrl,
-                keyboardType: TextInputType.number,
-                decoration: const InputDecoration(
-                  labelText: 'Monto objetivo',
-                  border: OutlineInputBorder(),
-                ),
+              const SizedBox(height: 16),
+              // Toggle
+              SegmentedControl(
+                options: const ['Meta', 'Presupuesto'],
+                selectedIndex: selectedType,
+                onChanged: (i) => setSheetState(() => selectedType = i),
               ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      'Fecha límite: ${DateFormat.yMMMd('es').format(selectedDate)}',
-                      style: Theme.of(context).textTheme.bodyLarge,
-                    ),
-                  ),
-                  TextButton(
-                    onPressed: () async {
-                      final date = await showDatePicker(
-                        context: ctx,
-                        initialDate: selectedDate,
-                        firstDate: DateTime.now(),
-                        lastDate: DateTime.now().add(const Duration(days: 3650)),
-                      );
-                      if (date != null) setSheetState(() => selectedDate = date);
-                    },
-                    child: const Text('Cambiar'),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              Text('Ícono', style: Theme.of(context).textTheme.labelMedium),
-              const SizedBox(height: 8),
-              SizedBox(
-                height: 80,
-                child: GridView.count(
-                  crossAxisCount: 7,
-                  mainAxisSpacing: 4,
-                  crossAxisSpacing: 4,
-                  shrinkWrap: true,
-                  scrollDirection: Axis.horizontal,
-                  children: _goalIcons.map((icon) {
-                    final isSelected = icon == selectedIcon;
-                    return GestureDetector(
-                      onTap: () => setSheetState(() => selectedIcon = icon),
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: isSelected ? AppColors.tertiaryFixedDim.withValues(alpha: 0.3) : AppColors.surfaceContainer,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Icon(icon, size: 22, color: isSelected ? AppColors.onTertiaryContainer : AppColors.primary),
-                      ),
-                    );
-                  }).toList(),
-                ),
-              ),
-              const SizedBox(height: 20),
-              SizedBox(
-                width: double.infinity,
-                child: FilledButton(
-                  onPressed: () async {
-                    final title = titleCtrl.text.trim();
-                    if (title.isEmpty) return;
-                    final amountText = amountCtrl.text
-                        .replaceAll('.', '')
-                        .replaceAll(',', '.');
-                    final amount = double.tryParse(amountText);
-                    if (amount == null || amount <= 0) return;
-                    await ctx.read<GoalProvider>().addGoal(Goal(
-                      title: title,
-                      targetAmount: amount,
-                      deadline: DateFormat.yMMMd('es').format(selectedDate),
-                      icon: _iconName(selectedIcon),
-                    ));
-                    if (!ctx.mounted) return;
-                    Navigator.pop(ctx);
-                  },
-                  child: const Text('Crear meta'),
-                ),
-              ),
+              const SizedBox(height: 24),
+              if (selectedType == 0) ...[
+                _buildGoalForm(ctx, setSheetState, titleCtrl, amountCtrl, selectedIcon, selectedColor, selectedDate),
+              ] else ...[
+                _buildBudgetForm(ctx, setSheetState, titleCtrl, amountCtrl, selectedBudgetCat, selectedBudgetIcon, selectedBudgetColor),
+              ],
             ],
           ),
         ),
       ),
     );
+  }
+
+  Widget _buildGoalForm(
+    BuildContext ctx,
+    StateSetter setSheetState,
+    TextEditingController titleCtrl,
+    TextEditingController amountCtrl,
+    String selectedIcon,
+    String selectedColor,
+    DateTime selectedDate,
+  ) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Target Amount
+        Center(
+          child: Column(
+            children: [
+              Text('Monto objetivo',
+                  style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                      color: AppColors.onSurfaceVariant)),
+              const SizedBox(height: 8),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.baseline,
+                textBaseline: TextBaseline.alphabetic,
+                children: [
+                  Text('\$',
+                      style: TextStyle(
+                          fontSize: 32,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.primary)),
+                  const SizedBox(width: 4),
+                  SizedBox(
+                    width: 160,
+                    child: TextField(
+                      controller: amountCtrl,
+                      keyboardType: TextInputType.number,
+                      inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[\d.,]'))],
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 32,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.primary,
+                      ),
+                      decoration: const InputDecoration(
+                        hintText: '0.00',
+                        border: InputBorder.none,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 24),
+        // Goal Name
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+          decoration: BoxDecoration(
+            color: AppColors.surfaceContainer,
+            borderRadius: BorderRadius.circular(24),
+          ),
+          child: Row(
+            children: [
+              Icon(Icons.edit_outlined, size: 20, color: AppColors.onSurfaceVariant),
+              const SizedBox(width: 12),
+              Expanded(
+                child: TextField(
+                  controller: titleCtrl,
+                  decoration: const InputDecoration(
+                    hintText: 'Nombre de la meta',
+                    border: InputBorder.none,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 20),
+        // Goal Icon selector
+        Text('Ícono', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: AppColors.onSurfaceVariant)),
+        const SizedBox(height: 8),
+        SizedBox(
+          height: 76,
+          child: ListView(
+            scrollDirection: Axis.horizontal,
+             children: _goalIcons.asMap().entries.map((entry) {
+               final i = entry.key;
+               final icon = entry.value;
+               final isSelected = _iconName(icon) == selectedIcon;
+               final catColor = TransactionCategory.values[i % TransactionCategory.values.length].color;
+               return GestureDetector(
+                 onTap: () => setSheetState(() => selectedIcon = _iconName(icon)),
+                child: Container(
+                  width: 60,
+                  margin: const EdgeInsets.only(right: 12),
+                  child: Column(
+                    children: [
+                      AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        width: 56,
+                        height: 56,
+                        decoration: BoxDecoration(
+                          color: isSelected
+                              ? catColor
+                              : catColor.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(28),
+                        ),
+                        child: Icon(icon, size: 22,
+                          color: isSelected ? AppColors.onPrimary : catColor),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        TransactionCategory.values[i % TransactionCategory.values.length].label,
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: isSelected ? catColor : AppColors.onSurfaceVariant,
+                          fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                        ),
+                        textAlign: TextAlign.center,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+        ),
+        const SizedBox(height: 20),
+        // Target Date
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+          decoration: BoxDecoration(
+            color: AppColors.surfaceContainer,
+            borderRadius: BorderRadius.circular(24),
+          ),
+          child: Row(
+            children: [
+              Icon(Icons.calendar_today, size: 20, color: AppColors.onSurfaceVariant),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  'Fecha límite: ${DateFormat.yMMMd('es').format(selectedDate)}',
+                  style: TextStyle(fontSize: 15, color: AppColors.onSurface),
+                ),
+              ),
+              TextButton(
+                onPressed: () async {
+                  final date = await showDatePicker(
+                    context: ctx,
+                    initialDate: selectedDate,
+                    firstDate: DateTime.now(),
+                    lastDate: DateTime.now().add(const Duration(days: 3650)),
+                  );
+                  if (date != null) setSheetState(() => selectedDate = date);
+                },
+                child: const Text('Cambiar'),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 24),
+        // Create button
+        SizedBox(
+          width: double.infinity,
+          child: FilledButton(
+            onPressed: () async {
+              final title = titleCtrl.text.trim();
+              if (title.isEmpty) return;
+              final amountText = amountCtrl.text
+                  .replaceAll('.', '').replaceAll(',', '.');
+              final amount = double.tryParse(amountText);
+              if (amount == null || amount <= 0) return;
+               await ctx.read<GoalProvider>().addGoal(Goal(
+                 title: title,
+                 targetAmount: amount,
+                 deadline: DateFormat.yMMMd('es').format(selectedDate),
+                 icon: selectedIcon,
+               ));
+              if (!ctx.mounted) return;
+              Navigator.pop(ctx);
+            },
+            style: FilledButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(999),
+              ),
+            ),
+            child: const Text('Crear meta',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+          ),
+        ),
+        const SizedBox(height: 12),
+        // Cancel button
+        SizedBox(
+          width: double.infinity,
+          child: OutlinedButton(
+            onPressed: () => Navigator.pop(ctx),
+            style: OutlinedButton.styleFrom(
+              backgroundColor: AppColors.surfaceContainer,
+              foregroundColor: AppColors.primary,
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(999),
+              ),
+              side: BorderSide.none,
+            ),
+            child: const Text('Cancelar',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildBudgetForm(
+    BuildContext ctx,
+    StateSetter setSheetState,
+    TextEditingController nameCtrl,
+    TextEditingController limitCtrl,
+    TransactionCategory selectedCat,
+    String selectedBudgetIcon,
+    String selectedBudgetColor,
+  ) {
+    final expenseCategories = TransactionCategory.values
+        .where((c) => c.isExpenseCategory)
+        .toList();
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Limit Amount
+        Center(
+          child: Column(
+            children: [
+              Text('Límite mensual',
+                  style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                      color: AppColors.onSurfaceVariant)),
+              const SizedBox(height: 8),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.baseline,
+                textBaseline: TextBaseline.alphabetic,
+                children: [
+                  Text('\$',
+                      style: TextStyle(
+                          fontSize: 32,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.primary)),
+                  const SizedBox(width: 4),
+                  SizedBox(
+                    width: 160,
+                    child: TextField(
+                      controller: limitCtrl,
+                      keyboardType: TextInputType.number,
+                      inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[\d.,]'))],
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 32,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.primary,
+                      ),
+                      decoration: const InputDecoration(
+                        hintText: '0.00',
+                        border: InputBorder.none,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 24),
+        // Budget Name
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+          decoration: BoxDecoration(
+            color: AppColors.surfaceContainer,
+            borderRadius: BorderRadius.circular(24),
+          ),
+          child: Row(
+            children: [
+              Icon(Icons.edit_outlined, size: 20, color: AppColors.onSurfaceVariant),
+              const SizedBox(width: 12),
+              Expanded(
+                child: TextField(
+                  controller: nameCtrl,
+                  decoration: const InputDecoration(
+                    hintText: 'Nombre del presupuesto',
+                    border: InputBorder.none,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 20),
+        // Category selector
+        Text('Categoría',
+            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: AppColors.onSurfaceVariant)),
+        const SizedBox(height: 8),
+        SizedBox(
+          height: 76,
+          child: ListView(
+            scrollDirection: Axis.horizontal,
+            children: expenseCategories.map((cat) {
+              final isSelected = cat == selectedCat;
+              return GestureDetector(
+                onTap: () => setSheetState(() => selectedCat = cat),
+                child: Container(
+                  width: 60,
+                  margin: const EdgeInsets.only(right: 12),
+                  child: Column(
+                    children: [
+                      AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        width: 56,
+                        height: 56,
+                        decoration: BoxDecoration(
+                          color: isSelected ? cat.color : cat.color.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(28),
+                        ),
+                        child: Icon(
+                          _iconForCategory(cat),
+                          size: 22,
+                          color: isSelected ? AppColors.onPrimary : cat.color,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        cat.label,
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: isSelected ? cat.color : AppColors.onSurfaceVariant,
+                          fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                        ),
+                        textAlign: TextAlign.center,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+        ),
+        const SizedBox(height: 24),
+        SizedBox(
+          width: double.infinity,
+          child: FilledButton(
+            onPressed: () async {
+              final name = nameCtrl.text.trim();
+              if (name.isEmpty) return;
+              final limitText = limitCtrl.text
+                  .replaceAll('.', '').replaceAll(',', '.');
+              final limit = double.tryParse(limitText);
+              if (limit == null || limit <= 0) return;
+              await ctx.read<GoalProvider>().addBudget(Budget(
+                categoryName: name,
+                category: selectedCat,
+                limit: limit,
+              ));
+              if (!ctx.mounted) return;
+              Navigator.pop(ctx);
+            },
+            style: FilledButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(999),
+              ),
+            ),
+            child: const Text('Crear presupuesto',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+          ),
+        ),
+        const SizedBox(height: 12),
+        SizedBox(
+          width: double.infinity,
+          child: OutlinedButton(
+            onPressed: () => Navigator.pop(ctx),
+            style: OutlinedButton.styleFrom(
+              backgroundColor: AppColors.surfaceContainer,
+              foregroundColor: AppColors.primary,
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(999),
+              ),
+              side: BorderSide.none,
+            ),
+            child: const Text('Cancelar',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+          ),
+        ),
+      ],
+    );
+  }
+
+  IconData _iconForCategory(TransactionCategory cat) {
+    switch (cat) {
+      case TransactionCategory.food: return Icons.restaurant;
+      case TransactionCategory.transport: return Icons.directions_car;
+      case TransactionCategory.shopping: return Icons.shopping_bag;
+      case TransactionCategory.services: return Icons.bolt;
+      case TransactionCategory.entertainment: return Icons.local_activity;
+      case TransactionCategory.health: return Icons.local_hospital;
+      case TransactionCategory.education: return Icons.school;
+      default: return Icons.more_horiz;
+    }
   }
 
   void _showGoalDetail(BuildContext context, Goal goal) {

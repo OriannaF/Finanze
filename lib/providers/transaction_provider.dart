@@ -25,13 +25,25 @@ class TransactionProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> _recalculateBudgets() async {
+    await _db.recalculateBudgetSpent();
+  }
+
   Future<void> addTransaction(Transaction t) async {
     await _db.insertTransaction(t);
+    await _recalculateBudgets();
+    await loadTransactions(period: _selectedPeriod);
+  }
+
+  Future<void> updateTransaction(Transaction t) async {
+    await _db.updateTransaction(t);
+    await _recalculateBudgets();
     await loadTransactions(period: _selectedPeriod);
   }
 
   Future<void> deleteTransaction(int id) async {
     await _db.deleteTransaction(id);
+    await _recalculateBudgets();
     await loadTransactions(period: _selectedPeriod);
   }
 
@@ -42,6 +54,18 @@ class TransactionProvider extends ChangeNotifier {
 
   Future<Map<String, double>> getExpensesByCategory({String? period}) async =>
       await _db.getExpensesByCategory(period: period);
+
+  double get totalExpense {
+    return _allTransactions
+        .where((t) => t.type == TransactionType.expense)
+        .fold(0.0, (sum, t) => sum + t.amount);
+  }
+
+  double get totalIncome {
+    return _allTransactions
+        .where((t) => t.type == TransactionType.income)
+        .fold(0.0, (sum, t) => sum + t.amount);
+  }
 
   double get totalBalance {
     final income = _allTransactions

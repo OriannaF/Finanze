@@ -42,20 +42,14 @@ class BottomNavBar extends StatelessWidget {
                 onTap: () => onTap(i),
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 200),
-                  child: Container(
-                    width: 44,
-                    height: 44,
-                    decoration: BoxDecoration(
-                      color: isSelected
-                          ? AppColors.surfaceContainer
-                          : Colors.transparent,
-                      borderRadius: BorderRadius.circular(22),
-                    ),
-                    child: Icon(
-                      item.icon,
-                      size: 22,
-                      color: AppColors.primary,
-                    ),
+                  width: 44,
+                  height: 44,
+                  child: Icon(
+                    item.icon,
+                    size: 22,
+                    color: isSelected
+                        ? AppColors.primary
+                        : AppColors.onSurfaceVariant,
                   ),
                 ),
               );

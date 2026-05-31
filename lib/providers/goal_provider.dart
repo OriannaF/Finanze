@@ -21,6 +21,7 @@ class GoalProvider extends ChangeNotifier {
     _isLoading = true;
     notifyListeners();
 
+    await _db.recalculateBudgetSpent();
     _goals = await _db.getGoals();
     _budgets = await _db.getBudgets();
 
@@ -55,8 +56,23 @@ class GoalProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> addBudget(Budget b) async {
+    await _db.insertBudget(b);
+    await loadData();
+  }
+
   Future<void> updateBudget(Budget b) async {
     await _db.updateBudget(b);
+    await loadData();
+  }
+
+  Future<void> deleteBudget(int id) async {
+    await _db.deleteBudget(id);
+    await loadData();
+  }
+
+  Future<void> recalculateAllBudgets({int? month, int? year}) async {
+    await _db.recalculateBudgetSpent(month: month, year: year);
     await loadData();
   }
 }
