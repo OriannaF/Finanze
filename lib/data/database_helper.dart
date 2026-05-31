@@ -5,7 +5,6 @@ import '../models/transaction.dart';
 import '../models/goal.dart';
 import '../models/budget.dart';
 import '../models/account.dart';
-import 'mock_data.dart';
 
 class DatabaseHelper {
   static final DatabaseHelper _instance = DatabaseHelper._internal();
@@ -117,28 +116,6 @@ class DatabaseHelper {
         )
       ''');
     }
-  }
-
-  Future<void> insertMockData() async {
-    final db = await database;
-    final result = await db.rawQuery('SELECT COUNT(*) as cnt FROM transactions');
-    final count = result.first['cnt'] as int?;
-    if (count != null && count > 0) return;
-
-    final batch = db.batch();
-    for (final t in MockData.transactions) {
-      batch.insert('transactions', t.toMap());
-    }
-    for (final g in MockData.goals) {
-      batch.insert('goals', g.toMap());
-    }
-    for (final b in MockData.budgets) {
-      batch.insert('budgets', b.toMap());
-    }
-    for (final a in MockData.accounts) {
-      batch.insert('accounts', a.toMap());
-    }
-    await batch.commit(noResult: true);
   }
 
   // Transactions

@@ -20,9 +20,14 @@ void main() async {
   Intl.defaultLocale = 'es';
 
   final db = DatabaseHelper();
-  await db.insertMockData();
-
   final prefs = await SharedPreferences.getInstance();
+
+  final mockCleaned = prefs.getBool('mockDataCleaned') ?? false;
+  if (!mockCleaned) {
+    await db.deleteAllData();
+    await prefs.setBool('mockDataCleaned', true);
+  }
+
   final onboardingCompleted = prefs.getBool('onboardingCompleted') ?? false;
 
   runApp(

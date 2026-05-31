@@ -265,16 +265,21 @@ class _GoalsScreenState extends State<GoalsScreen> {
               SizedBox(
                 width: double.infinity,
                 child: FilledButton(
-                  onPressed: () {
+                  onPressed: () async {
                     final title = titleCtrl.text.trim();
-                    final amount = double.tryParse(amountCtrl.text);
-                    if (title.isEmpty || amount == null || amount <= 0) return;
-                    context.read<GoalProvider>().addGoal(Goal(
+                    if (title.isEmpty) return;
+                    final amountText = amountCtrl.text
+                        .replaceAll('.', '')
+                        .replaceAll(',', '.');
+                    final amount = double.tryParse(amountText);
+                    if (amount == null || amount <= 0) return;
+                    await ctx.read<GoalProvider>().addGoal(Goal(
                       title: title,
                       targetAmount: amount,
                       deadline: DateFormat.yMMMd('es').format(selectedDate),
                       icon: _iconName(selectedIcon),
                     ));
+                    if (!ctx.mounted) return;
                     Navigator.pop(ctx);
                   },
                   child: const Text('Crear meta'),

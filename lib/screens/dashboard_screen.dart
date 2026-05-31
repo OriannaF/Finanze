@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import '../data/database_helper.dart';
+import '../models/account.dart';
 import '../providers/transaction_provider.dart';
+import '../providers/settings_provider.dart';
 import '../theme/app_colors.dart';
 import '../utils/currency_formatter.dart';
 import '../widgets/account_card.dart';
 import '../widgets/transaction_tile.dart';
-import '../data/mock_data.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -16,18 +18,29 @@ class DashboardScreen extends StatefulWidget {
 }
 
 class _DashboardScreenState extends State<DashboardScreen> {
+  List<Account> _accounts = [];
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<TransactionProvider>().loadTransactions();
+      _loadAccounts();
     });
+  }
+
+  Future<void> _loadAccounts() async {
+    final accounts = await DatabaseHelper().getAccounts();
+    if (!mounted) return;
+    setState(() => _accounts = accounts);
   }
 
   @override
   Widget build(BuildContext context) {
     return Consumer<TransactionProvider>(
       builder: (context, provider, _) {
+        final settings = context.watch<SettingsProvider>();
+        final userName = settings.userName.isNotEmpty ? settings.userName : 'usuario';
         final recentTx = provider.transactions.take(5).toList();
 
         return SafeArea(
@@ -49,7 +62,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     ),
                     const SizedBox(width: 8),
                     Text(
-                      'Hola, usuario',
+                      'Hola, $userName',
                       style: Theme.of(context).textTheme.headlineMedium,
                     ),
                     const Spacer(),
@@ -92,7 +105,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   child: ListView(
                     scrollDirection: Axis.horizontal,
                     children: [
-                      ...MockData.accounts.map((a) => Padding(
+                      ..._accounts.map((a) => Padding(
                         padding: const EdgeInsets.only(right: 12),
                         child: AccountCard(account: a),
                       )),

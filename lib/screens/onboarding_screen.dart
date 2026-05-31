@@ -17,15 +17,17 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   final PageController _pageController = PageController();
   int _currentPage = 0;
 
+  final TextEditingController _nameController = TextEditingController();
   String? _selectedGoal;
   String? _selectedFrequency;
   bool? _selectedWantsGoal;
 
-  static const int _totalPages = 9;
+  static const int _totalPages = 8;
 
   @override
   void dispose() {
     _pageController.dispose();
+    _nameController.dispose();
     super.dispose();
   }
 
@@ -48,6 +50,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   Future<void> _completeOnboarding() async {
     final settings = context.read<SettingsProvider>();
+    final name = _nameController.text.trim();
+    if (name.isNotEmpty) {
+      await settings.setUserName(name);
+    }
     if (_selectedGoal != null) {
       await settings.setOnboardingGoal(_selectedGoal);
     }
@@ -200,20 +206,21 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   SizedBox(
                     width: double.infinity,
                     height: 52,
-                    child: FilledButton(
-                      onPressed: () {
+                    child:                   FilledButton(
+                      onPressed: () async {
                         final name = nameController.text.trim();
                         if (name.isEmpty) return;
                         final balance =
                             double.tryParse(balanceController.text) ?? 0;
-                        Navigator.of(ctx).pop(true);
-                        DatabaseHelper().insertAccount(
+                        await DatabaseHelper().insertAccount(
                           Account(
                             name: name,
                             balance: balance,
                             type: selectedType,
                           ),
                         );
+                        if (!ctx.mounted) return;
+                        Navigator.of(ctx).pop(true);
                       },
                       style: FilledButton.styleFrom(
                         backgroundColor: AppColors.primary,
@@ -244,9 +251,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 
   bool get _canProceed {
-    if (_currentPage == 5) return _selectedGoal != null;
-    if (_currentPage == 6) return _selectedFrequency != null;
-    if (_currentPage == 7) return _selectedWantsGoal != null;
+    if (_currentPage == 1) return _nameController.text.trim().isNotEmpty;
     return true;
   }
 
@@ -271,10 +276,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 },
                 children: [
                   _buildWelcomePage(),
-                  _buildProblemPage(),
-                  _buildSolutionPage(),
-                  _buildGoalsPage(),
-                  _buildPersonalizationPage(),
+                  _buildNamePage(),
+                  _buildProblemSolutionPage(),
+                  _buildGoalsValuePage(),
                   _buildQuestion1Page(),
                   _buildQuestion2Page(),
                   _buildQuestion3Page(),
@@ -295,7 +299,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       child: Row(
         children: [
           Expanded(child: _buildProgressBar()),
-          if (_currentPage < _totalPages - 1)
+          if (_currentPage >= 2 && _currentPage < _totalPages - 1)
             GestureDetector(
               onTap: _skip,
               child: Padding(
@@ -316,23 +320,15 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 
   Widget _buildProgressBar() {
-    return Row(
-      children: List.generate(_totalPages, (index) {
-        final isActive = index <= _currentPage;
-        return Expanded(
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 300),
-            height: 3,
-            margin: EdgeInsets.only(right: index < _totalPages - 1 ? 4 : 0),
-            decoration: BoxDecoration(
-              color: isActive
-                  ? AppColors.primary
-                  : AppColors.surfaceContainerHighest,
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-        );
-      }),
+    final progress = (_currentPage + 1) / _totalPages;
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(2),
+      child: LinearProgressIndicator(
+        value: progress,
+        backgroundColor: AppColors.surfaceContainerHighest,
+        valueColor: const AlwaysStoppedAnimation(AppColors.primary),
+        minHeight: 3,
+      ),
     );
   }
 
@@ -441,21 +437,21 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     );
   }
 
-  Widget _buildProblemPage() {
+  Widget _buildNamePage() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 32),
       child: Column(
         children: [
           const Spacer(flex: 2),
           Image.asset(
-            'assets/images/zoe_duda.png',
-            width: 180,
-            height: 180,
+            'assets/images/zoe_sentada.png',
+            width: 140,
+            height: 140,
             fit: BoxFit.contain,
           ),
           const Spacer(flex: 1),
           Text(
-            '¿Te pasa esto?',
+            '¿Cómo te llamás?',
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 26,
@@ -464,9 +460,60 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               letterSpacing: -0.3,
             ),
           ),
+          const SizedBox(height: 32),
+          TextField(
+            controller: _nameController,
+            onChanged: (_) => setState(() {}),
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.w600,
+              color: AppColors.onSurface,
+            ),
+            decoration: InputDecoration(
+              hintText: 'Tu nombre',
+              filled: true,
+              fillColor: AppColors.surfaceContainer,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16),
+                borderSide: BorderSide.none,
+              ),
+            ),
+          ),
+          const Spacer(flex: 2),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildProblemSolutionPage() {
+    final name = _nameController.text.trim();
+    final greeting = name.isNotEmpty ? name : 'amigo';
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 32),
+      child: Column(
+        children: [
+          const Spacer(flex: 2),
+          Image.asset(
+            'assets/images/zoe_duda.png',
+            width: 160,
+            height: 160,
+            fit: BoxFit.contain,
+          ),
+          const Spacer(flex: 1),
+          Text(
+            '$greeting, ¿te cuestan tus finanzas?',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.w700,
+              color: AppColors.onSurface,
+              letterSpacing: -0.3,
+            ),
+          ),
           const SizedBox(height: 12),
           Text(
-            'Cobrás, gastás un poco acá, otro poco allá... y al final del mes no sabés en qué se fue la plata.',
+            'Finanze lo organiza todo por vos. Registrá movimientos, controlá tus cuentas y visualizá todo en un solo lugar.',
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 15,
@@ -509,7 +556,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     );
   }
 
-  Widget _buildSolutionPage() {
+  Widget _buildGoalsValuePage() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 32),
       child: Column(
@@ -517,78 +564,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           const Spacer(flex: 2),
           Image.asset(
             'assets/images/zoe_anteojos.png',
-            width: 180,
-            height: 180,
+            width: 160,
+            height: 160,
             fit: BoxFit.contain,
-          ),
-          const Spacer(flex: 1),
-          Text(
-            'Finanze lo organiza por vos',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 26,
-              fontWeight: FontWeight.w700,
-              color: AppColors.onSurface,
-              letterSpacing: -0.3,
-            ),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            'Registrá movimientos, controlá tus cuentas y visualizá todo en un solo lugar.',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.w400,
-              color: AppColors.onSurfaceVariant,
-              height: 1.4,
-            ),
-          ),
-          const SizedBox(height: 28),
-          _buildMiniBullet(Icons.account_balance_wallet_rounded, 'Saldo actualizado'),
-          const SizedBox(height: 12),
-          _buildMiniBullet(Icons.history_rounded, 'Historial completo'),
-          const SizedBox(height: 12),
-          _buildMiniBullet(Icons.bar_chart_rounded, 'Estadísticas automáticas'),
-          const Spacer(flex: 2),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildMiniBullet(IconData icon, String text) {
-    return Row(
-      children: [
-        Icon(icon, size: 20, color: AppColors.primary),
-        const SizedBox(width: 12),
-        Text(
-          text,
-          style: TextStyle(
-            fontSize: 15,
-            color: AppColors.onSurface,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildGoalsPage() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 32),
-      child: Column(
-        children: [
-          const Spacer(flex: 2),
-          Container(
-            width: 100,
-            height: 100,
-            decoration: BoxDecoration(
-              color: AppColors.surfaceContainer,
-              borderRadius: BorderRadius.circular(28),
-            ),
-            child: Icon(
-              Icons.rocket_launch_rounded,
-              size: 48,
-              color: AppColors.primary,
-            ),
           ),
           const Spacer(flex: 1),
           Text(
@@ -603,7 +581,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           ),
           const SizedBox(height: 12),
           Text(
-            'Creá metas para viajes, una notebook nueva o tu fondo de emergencia y seguí tu progreso día a día.',
+            'Con una app adaptada a vos: elegí tu moneda, definí presupuestos, personalizá categorías y exportá tus datos cuando quieras.',
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 15,
@@ -630,6 +608,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     );
   }
 
+
   Widget _buildExampleChip(String text) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
@@ -644,87 +623,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     );
   }
 
-  Widget _buildPersonalizationPage() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 32),
-      child: Column(
-        children: [
-          const Spacer(flex: 2),
-          Container(
-            width: 100,
-            height: 100,
-            decoration: BoxDecoration(
-              color: AppColors.surfaceContainer,
-              borderRadius: BorderRadius.circular(28),
-            ),
-            child: Icon(
-              Icons.tune_rounded,
-              size: 48,
-              color: AppColors.primary,
-            ),
-          ),
-          const Spacer(flex: 1),
-          Text(
-            'Adaptada a vos',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 26,
-              fontWeight: FontWeight.w700,
-              color: AppColors.onSurface,
-              letterSpacing: -0.3,
-            ),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            'Elegí tu moneda, definí presupuestos, personalizá categorías y exportá tus datos cuando quieras.',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.w400,
-              color: AppColors.onSurfaceVariant,
-              height: 1.4,
-            ),
-          ),
-          const SizedBox(height: 28),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              _buildIconLabel(Icons.attach_money_rounded, 'Moneda'),
-              _buildIconLabel(Icons.pie_chart_rounded, 'Presupuesto'),
-              _buildIconLabel(Icons.file_download_rounded, 'Exportación'),
-              _buildIconLabel(Icons.label_rounded, 'Categorías'),
-            ],
-          ),
-          const Spacer(flex: 2),
-        ],
-      ),
-    );
-  }
 
-  Widget _buildIconLabel(IconData icon, String label) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          width: 48,
-          height: 48,
-          decoration: BoxDecoration(
-            color: AppColors.surfaceContainer,
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: Icon(icon, size: 22, color: AppColors.primary),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 12,
-            color: AppColors.onSurfaceVariant,
-          ),
-        ),
-      ],
-    );
-  }
 
   Widget _buildQuestion1Page() {
     return Padding(
@@ -764,6 +663,18 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             isSelected: _selectedGoal == 'Salir de deudas',
             onTap: () => setState(() => _selectedGoal = 'Salir de deudas'),
           ),
+          const SizedBox(height: 8),
+          TextButton(
+            onPressed: _nextPage,
+            child: Text(
+              'Omitir',
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w500,
+                color: AppColors.onSurfaceVariant,
+              ),
+            ),
+          ),
           const Spacer(flex: 2),
         ],
       ),
@@ -802,6 +713,18 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             isSelected: _selectedFrequency == 'Casi siempre',
             onTap: () => setState(() => _selectedFrequency = 'Casi siempre'),
           ),
+          const SizedBox(height: 8),
+          TextButton(
+            onPressed: _nextPage,
+            child: Text(
+              'Omitir',
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w500,
+                color: AppColors.onSurfaceVariant,
+              ),
+            ),
+          ),
           const Spacer(flex: 2),
         ],
       ),
@@ -834,6 +757,18 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             text: 'Más tarde',
             isSelected: _selectedWantsGoal == false,
             onTap: () => setState(() => _selectedWantsGoal = false),
+          ),
+          const SizedBox(height: 8),
+          TextButton(
+            onPressed: _nextPage,
+            child: Text(
+              'Omitir',
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w500,
+                color: AppColors.onSurfaceVariant,
+              ),
+            ),
           ),
           const Spacer(flex: 2),
         ],
@@ -897,7 +832,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           ),
           const Spacer(flex: 1),
           Text(
-            'Empecemos con tu primera cuenta',
+            '¡Todo listo! Empecemos con tu primera cuenta',
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 26,

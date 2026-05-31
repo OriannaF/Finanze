@@ -14,6 +14,7 @@ class SettingsProvider extends ChangeNotifier {
   String? _onboardingGoal;
   String? _onboardingFrequency;
   bool? _onboardingWantsGoal;
+  String _userName = '';
 
   String get currency => _currency;
   double get monthlyBudgetLimit => _monthlyBudgetLimit;
@@ -25,6 +26,7 @@ class SettingsProvider extends ChangeNotifier {
   String? get onboardingGoal => _onboardingGoal;
   String? get onboardingFrequency => _onboardingFrequency;
   bool? get onboardingWantsGoal => _onboardingWantsGoal;
+  String get userName => _userName;
 
   static const _keyCurrency = 'currency';
   static const _keyBudgetLimit = 'monthlyBudgetLimit';
@@ -36,6 +38,7 @@ class SettingsProvider extends ChangeNotifier {
   static const _keyOnboardingGoal = 'onboardingGoal';
   static const _keyOnboardingFrequency = 'onboardingFrequency';
   static const _keyOnboardingWantsGoal = 'onboardingWantsGoal';
+  static const _keyUserName = 'userName';
 
   SettingsProvider() {
     _load();
@@ -56,6 +59,7 @@ class SettingsProvider extends ChangeNotifier {
     _onboardingGoal = prefs.getString(_keyOnboardingGoal);
     _onboardingFrequency = prefs.getString(_keyOnboardingFrequency);
     _onboardingWantsGoal = prefs.getBool(_keyOnboardingWantsGoal);
+    _userName = prefs.getString(_keyUserName) ?? '';
     notifyListeners();
   }
 
@@ -174,6 +178,13 @@ class SettingsProvider extends ChangeNotifier {
     } else {
       await prefs.remove(_keyOnboardingWantsGoal);
     }
+    notifyListeners();
+  }
+
+  Future<void> setUserName(String value) async {
+    _userName = value;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_keyUserName, value);
     notifyListeners();
   }
 }
