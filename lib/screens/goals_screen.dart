@@ -645,7 +645,7 @@ class _GoalsScreenState extends State<GoalsScreen> {
             }).toList(),
           ),
         ),
-        const SizedBox(height: 24),
+        const SizedBox(height: 92),
         SizedBox(
           width: double.infinity,
           child: FilledButton(

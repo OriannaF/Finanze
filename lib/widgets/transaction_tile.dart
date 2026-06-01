@@ -22,7 +22,7 @@ class TransactionTile extends StatelessWidget {
     final isDeclined = transaction.title == 'Prudential';
     final amountColor = transaction.type == TransactionType.income
         ? AppColors.green
-        : AppColors.onBackground;
+        : AppColors.error;
 
     return InkWell(
       onTap: onTap,
@@ -60,11 +60,18 @@ class TransactionTile extends StatelessWidget {
             Column(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                Text(
-                  '${transaction.type == TransactionType.income ? '+' : '-'}${formatCurrency(transaction.amount)}',
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    color: amountColor,
-                    decoration: isDeclined ? TextDecoration.lineThrough : null,
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: amountColor.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    '${transaction.type == TransactionType.income ? '+' : '-'}${formatCurrency(transaction.amount)}',
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      color: amountColor,
+                      decoration: isDeclined ? TextDecoration.lineThrough : null,
+                    ),
                   ),
                 ),
                 if (showDate && transaction.note.isNotEmpty)
