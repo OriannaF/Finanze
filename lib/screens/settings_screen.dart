@@ -42,15 +42,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
         automaticallyImplyLeading: false,
         leading: GestureDetector(
           onTap: () => Navigator.of(context).pop(),
-          child: Container(
-            margin: const EdgeInsets.only(left: 16),
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: AppColors.surfaceContainerHigh.withValues(alpha: 0.5),
-              borderRadius: BorderRadius.circular(20),
+          child: Center(
+            child: Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: AppColors.surfaceContainerHigh.withValues(alpha: 0.5),
+                borderRadius: BorderRadius.circular(22),
+              ),
+              child: const Icon(Icons.arrow_back, color: AppColors.onSurface, size: 22),
             ),
-            child: const Icon(Icons.arrow_back, color: AppColors.onSurface, size: 22),
           ),
         ),
         title: const Text('Configuración'),
@@ -85,8 +86,26 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
                 const _SettingsDivider(),
                 _SettingsItem(
-                  icon: Icons.manage_accounts,
+                  icon: Icons.account_balance_wallet,
                   label: 'Administrar cuentas',
+                  leading: Stack(
+                    children: [
+                      const Icon(Icons.account_balance_wallet, size: 22, color: AppColors.primary),
+                      Positioned(
+                        right: -2,
+                        bottom: -2,
+                        child: Container(
+                          width: 14,
+                          height: 14,
+                          decoration: BoxDecoration(
+                            color: AppColors.surfaceContainerLowest,
+                            borderRadius: BorderRadius.circular(7),
+                          ),
+                          child: const Icon(Icons.settings, size: 10, color: AppColors.onSurfaceVariant),
+                        ),
+                      ),
+                    ],
+                  ),
                   trailing: const Icon(Icons.chevron_right, color: AppColors.outlineVariant),
                   onTap: () => context.push('/account-settings'),
                 ),
@@ -157,6 +176,28 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   onTap: () => _showAboutDialog(context),
                 ),
               ],
+            ),
+            const SizedBox(height: 24),
+            Center(
+              child: Column(
+                children: [
+                  Image.asset(
+                    'assets/images/zoe_anteojos.png',
+                    width: 100,
+                    height: 100,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Zoe es tu mascota financiera.\nTe ayuda a mantener tus finanzas bajo control.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: AppColors.onSurfaceVariant,
+                      height: 1.4,
+                    ),
+                  ),
+                ],
+              ),
             ),
             const SizedBox(height: 32),
           ],
@@ -491,13 +532,15 @@ class _SettingsGroup extends StatelessWidget {
 }
 
 class _SettingsItem extends StatelessWidget {
-  final IconData icon;
+  final IconData? icon;
+  final Widget? leading;
   final String label;
   final Widget trailing;
   final VoidCallback? onTap;
 
   const _SettingsItem({
-    required this.icon,
+    this.icon,
+    this.leading,
     required this.label,
     required this.trailing,
     this.onTap,
@@ -512,7 +555,7 @@ class _SettingsItem extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
         child: Row(
           children: [
-            Icon(icon, size: 22, color: AppColors.primary),
+            leading ?? Icon(icon, size: 22, color: AppColors.primary),
             const SizedBox(width: 16),
             Expanded(
               child: Text(label, style: Theme.of(context).textTheme.titleLarge),
@@ -693,30 +736,31 @@ class _CategoriesScreenState extends State<_CategoriesScreen> {
                 const SizedBox(height: 16),
                 Text('Ícono', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: AppColors.onSurfaceVariant)),
                 const SizedBox(height: 8),
-                SizedBox(
-                  height: 56,
-                  child: ListView(
-                    scrollDirection: Axis.horizontal,
-                    children: _allCategoryIcons.map((iconName) {
-                      final isSel = selectedIcon == iconName;
-                      return GestureDetector(
-                        onTap: () => setDialogState(() => selectedIcon = iconName),
-                        child: Container(
-                          width: 52,
-                          height: 52,
-                          margin: const EdgeInsets.only(right: 8),
-                          decoration: BoxDecoration(
-                            color: isSel ? _colorFromHex(selectedColor) : _colorFromHex(selectedColor).withValues(alpha: 0.15),
-                            borderRadius: BorderRadius.circular(26),
-                          ),
-                          child: Icon(
-                            _iconDataFromName(iconName),
-                            size: 22,
-                            color: isSel ? Colors.white : _colorFromHex(selectedColor),
-                          ),
+                GestureDetector(
+                  onTap: () => _showIconPicker(ctx, selectedIcon, selectedColor, (newIcon) => setDialogState(() => selectedIcon = newIcon)),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 44,
+                        height: 44,
+                        decoration: BoxDecoration(
+                          color: _colorFromHex(selectedColor).withValues(alpha: 0.2),
+                          borderRadius: BorderRadius.circular(22),
                         ),
-                      );
-                    }).toList(),
+                        child: Icon(
+                          _iconDataFromName(selectedIcon),
+                          color: _colorFromHex(selectedColor),
+                          size: 22,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Text(
+                        'Tocar para elegir ícono',
+                        style: TextStyle(fontSize: 14, color: AppColors.onSurfaceVariant),
+                      ),
+                      const Spacer(),
+                      const Icon(Icons.chevron_right, color: AppColors.outlineVariant, size: 20),
+                    ],
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -779,6 +823,56 @@ class _CategoriesScreenState extends State<_CategoriesScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  void _showIconPicker(BuildContext sheetContext, String currentIcon, String currentColor, void Function(String) onSelected) {
+    showDialog(
+      context: sheetContext,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Elegir ícono'),
+        content: SizedBox(
+          width: 320,
+          height: 400,
+          child: GridView.builder(
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 6,
+              mainAxisSpacing: 8,
+              crossAxisSpacing: 8,
+            ),
+            itemCount: _allCategoryIcons.length,
+            itemBuilder: (_, i) {
+              final iconName = _allCategoryIcons[i];
+              final isSelected = currentIcon == iconName;
+              final iconColor = _colorFromHex(currentColor);
+              return GestureDetector(
+                onTap: () {
+                  onSelected(iconName);
+                  Navigator.pop(ctx);
+                },
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: isSelected ? iconColor : iconColor.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(12),
+                    border: isSelected ? Border.all(color: iconColor, width: 2) : null,
+                  ),
+                  child: Icon(
+                    _iconDataFromName(iconName),
+                    size: 24,
+                    color: isSelected ? Colors.white : iconColor,
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancelar'),
+          ),
+        ],
       ),
     );
   }

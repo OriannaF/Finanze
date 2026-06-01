@@ -35,11 +35,15 @@ class _AmountInputState extends State<AmountInput> {
   }
 
   String _fromDouble(double value) {
+    if (value == 0) return '0';
     final rounded = (value * 100).roundToDouble() / 100;
+    String raw;
     if (rounded == rounded.roundToDouble()) {
-      return rounded.toInt().toString();
+      raw = rounded.toInt().toString();
+    } else {
+      raw = rounded.toStringAsFixed(2).replaceAll('.', ',');
     }
-    return rounded.toStringAsFixed(2).replaceAll('.', ',');
+    return _formatThousands(raw);
   }
 
   void _onKeyPress(String key) {
@@ -66,11 +70,35 @@ class _AmountInputState extends State<AmountInput> {
         }
       }
 
-      final parsed = double.tryParse(_displayValue.replaceAll(',', '.'));
+      _displayValue = _formatThousands(_displayValue);
+
+      final raw = _displayValue.replaceAll('.', '').replaceAll(',', '.');
+      final parsed = double.tryParse(raw);
       if (parsed != null) {
         widget.onChanged(parsed);
       }
     });
+  }
+
+  String _formatThousands(String value) {
+    if (value.contains(',')) {
+      final parts = value.split(',');
+      return '${_formatIntPart(parts[0])},${parts[1]}';
+    }
+    return _formatIntPart(value);
+  }
+
+  String _formatIntPart(String intPart) {
+    final digits = intPart.replaceAll('.', '');
+    if (digits.isEmpty) return '0';
+    final buffer = StringBuffer();
+    for (int i = 0; i < digits.length; i++) {
+      if (i > 0 && (digits.length - i) % 3 == 0) {
+        buffer.write('.');
+      }
+      buffer.write(digits[i]);
+    }
+    return buffer.toString();
   }
 
   @override

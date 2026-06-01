@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../providers/goal_provider.dart';
@@ -33,6 +34,7 @@ class _GoalsScreenState extends State<GoalsScreen> {
       builder: (context, provider, _) {
         return SafeArea(
           child: Stack(
+            clipBehavior: Clip.none,
             children: [
               SingleChildScrollView(
                 padding: const EdgeInsets.fromLTRB(20, 16, 20, 100),
@@ -40,6 +42,13 @@ class _GoalsScreenState extends State<GoalsScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const SizedBox(height: 44),
+                    Text(
+                      'Metas',
+                      style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                        fontSize: 20,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
                     // Goals list
                     if (provider.goals.isEmpty)
                       Container(
@@ -65,7 +74,7 @@ class _GoalsScreenState extends State<GoalsScreen> {
                     else
                       ...provider.goals.map((goal) => _GoalCard(
                         goal: goal,
-                        onTap: () => _showGoalDetail(context, goal),
+                        onTap: () => context.push('/goal-detail?id=${goal.id}'),
                       )),
                     const SizedBox(height: 32),
                     // Monthly Budget
@@ -131,6 +140,7 @@ class _GoalsScreenState extends State<GoalsScreen> {
                             return _BudgetItem(
                               budget: budget,
                               isLast: isLast,
+                              onTap: () => context.push('/budget-transactions?category=${budget.category!.name}&budgetId=${budget.id}'),
                             );
                           }).toList(),
                         ),
@@ -139,38 +149,46 @@ class _GoalsScreenState extends State<GoalsScreen> {
                   ],
                 ),
               ),
-              // Header and add button
+              // Header
               Positioned(
                 top: 0,
                 left: 0,
-                right: 20,
-                child: Row(
-                  children: [
-                    const Spacer(),
-                    Text(
-                      'Metas activas',
-                      style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                        fontSize: 20,
-                      ),
+                right: 0,
+                child: Center(
+                  child: Text(
+                    'Objetivos',
+                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                      fontSize: 20,
                     ),
-                    const Spacer(),
-                    GestureDetector(
-                      onTap: () => _showCreateSheet(context),
-                      child: Container(
-                        width: 36,
-                        height: 36,
-                        decoration: BoxDecoration(
-                          color: AppColors.surfaceContainerHigh.withValues(alpha: 0.5),
-                          borderRadius: BorderRadius.circular(18),
+                  ),
+                ),
+              ),
+              // FAB
+              Positioned(
+                right: 4,
+                bottom: 16,
+                child: GestureDetector(
+                  onTap: () => _showCreateSheet(context),
+                  child: Container(
+                    width: 56,
+                    height: 56,
+                    decoration: BoxDecoration(
+                      color: AppColors.primary,
+                      borderRadius: BorderRadius.circular(28),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.3),
+                          blurRadius: 12,
+                          offset: const Offset(0, 4),
                         ),
-                        child: const Icon(
-                          Icons.add,
-                          size: 20,
-                          color: AppColors.primary,
-                        ),
-                      ),
+                      ],
                     ),
-                  ],
+                    child: const Icon(
+                      Icons.add,
+                      color: AppColors.onPrimary,
+                      size: 28,
+                    ),
+                  ),
                 ),
               ),
             ],
@@ -262,9 +280,14 @@ class _GoalsScreenState extends State<GoalsScreen> {
               ),
               const SizedBox(height: 24),
               if (selectedType == 0) ...[
-                _buildGoalForm(ctx, setSheetState, titleCtrl, amountCtrl, selectedIcon, selectedColor, selectedDate),
+                _buildGoalForm(
+                  ctx, setSheetState, titleCtrl, amountCtrl,
+                  selectedIcon, selectedColor, selectedDate,
+                  onIconChanged: (name) { selectedIcon = name; },
+                  onDateChanged: (date) { selectedDate = date; },
+                ),
               ] else ...[
-                _buildBudgetForm(ctx, setSheetState, titleCtrl, amountCtrl, selectedBudgetCat, selectedBudgetIcon, selectedBudgetColor),
+                _buildBudgetForm(ctx, setSheetState, titleCtrl, amountCtrl, selectedBudgetCat, selectedBudgetIcon, selectedBudgetColor, (cat) { selectedBudgetCat = cat; }),
               ],
             ],
           ),
@@ -280,8 +303,10 @@ class _GoalsScreenState extends State<GoalsScreen> {
     TextEditingController amountCtrl,
     String selectedIcon,
     String selectedColor,
-    DateTime selectedDate,
-  ) {
+    DateTime selectedDate, {
+    ValueChanged<String>? onIconChanged,
+    ValueChanged<DateTime>? onDateChanged,
+  }) {
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -310,7 +335,7 @@ class _GoalsScreenState extends State<GoalsScreen> {
                     child: TextField(
                       controller: amountCtrl,
                       keyboardType: TextInputType.number,
-                      inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[\d.,]'))],
+                      inputFormatters: [_ThousandsInputFormatter()],
                       textAlign: TextAlign.left,
                       style: TextStyle(
                         fontSize: 32,
@@ -368,7 +393,11 @@ class _GoalsScreenState extends State<GoalsScreen> {
               final isSelected = _iconName(icon) == selectedIcon;
               final catColor = TransactionCategory.values[i % TransactionCategory.values.length].color;
               return GestureDetector(
-                onTap: () => setSheetState(() => selectedIcon = _iconName(icon)),
+                onTap: () {
+                  final name = _iconName(icon);
+                  setSheetState(() => selectedIcon = name);
+                  onIconChanged?.call(name);
+                },
                 child: Container(
                   width: 56,
                   height: 56,
@@ -412,7 +441,10 @@ class _GoalsScreenState extends State<GoalsScreen> {
                     firstDate: DateTime.now(),
                     lastDate: DateTime.now().add(const Duration(days: 3650)),
                   );
-                  if (date != null) setSheetState(() => selectedDate = date);
+                  if (date != null) {
+                    setSheetState(() => selectedDate = date);
+                    onDateChanged?.call(date);
+                  }
                 },
                 child: const Text('Cambiar'),
               ),
@@ -482,6 +514,7 @@ class _GoalsScreenState extends State<GoalsScreen> {
     TransactionCategory selectedCat,
     String selectedBudgetIcon,
     String selectedBudgetColor,
+    ValueChanged<TransactionCategory> onCatChanged,
   ) {
     final expenseCategories = TransactionCategory.values
         .where((c) => c.isExpenseCategory)
@@ -515,7 +548,7 @@ class _GoalsScreenState extends State<GoalsScreen> {
                     child: TextField(
                       controller: limitCtrl,
                       keyboardType: TextInputType.number,
-                      inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[\d.,]'))],
+                      inputFormatters: [_ThousandsInputFormatter()],
                       textAlign: TextAlign.left,
                       style: TextStyle(
                         fontSize: 32,
@@ -570,7 +603,10 @@ class _GoalsScreenState extends State<GoalsScreen> {
             children: expenseCategories.map((cat) {
               final isSelected = cat == selectedCat;
               return GestureDetector(
-                onTap: () => setSheetState(() => selectedCat = cat),
+                onTap: () {
+                  setSheetState(() => selectedCat = cat);
+                  onCatChanged(cat);
+                },
                 child: Container(
                   width: 60,
                   margin: const EdgeInsets.only(right: 12),
@@ -1069,7 +1105,8 @@ class _GoalCard extends StatelessWidget {
 class _BudgetItem extends StatelessWidget {
   final Budget budget;
   final bool isLast;
-  const _BudgetItem({required this.budget, required this.isLast});
+  final VoidCallback? onTap;
+  const _BudgetItem({required this.budget, required this.isLast, this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -1085,7 +1122,9 @@ class _BudgetItem extends StatelessWidget {
         ? cat.color
         : AppColors.primary;
 
-    return Container(
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         border: isLast
@@ -1166,6 +1205,7 @@ class _BudgetItem extends StatelessWidget {
           ),
         ],
       ),
+    ),
     );
   }
 
@@ -1180,5 +1220,25 @@ class _BudgetItem extends StatelessWidget {
       case TransactionCategory.education: return Icons.school;
       default: return Icons.more_horiz;
     }
+  }
+}
+
+class _ThousandsInputFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(TextEditingValue oldValue, TextEditingValue newValue) {
+    final digitsOnly = newValue.text.replaceAll(RegExp(r'[^\d]'), '');
+    if (digitsOnly.isEmpty) return TextEditingValue.empty;
+    final buffer = StringBuffer();
+    for (int i = 0; i < digitsOnly.length; i++) {
+      if (i > 0 && (digitsOnly.length - i) % 3 == 0) {
+        buffer.write('.');
+      }
+      buffer.write(digitsOnly[i]);
+    }
+    final formatted = buffer.toString();
+    return TextEditingValue(
+      text: formatted,
+      selection: TextSelection.collapsed(offset: formatted.length),
+    );
   }
 }

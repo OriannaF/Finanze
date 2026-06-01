@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import '../models/transaction.dart';
 import '../widgets/bottom_nav_bar.dart';
 import '../screens/dashboard_screen.dart';
 import '../screens/activity_screen.dart';
@@ -11,6 +12,8 @@ import '../screens/add_expense_screen.dart';
 import '../screens/onboarding_screen.dart';
 import '../screens/account_settings_screen.dart';
 import '../screens/account_detail_screen.dart';
+import '../screens/goal_detail_screen.dart';
+import '../screens/budget_transactions_screen.dart';
 
 final GlobalKey<NavigatorState> _rootNavigatorKey = GlobalKey<NavigatorState>();
 
@@ -103,6 +106,31 @@ GoRouter createRouter({String initialRoute = '/'}) {
             state.uri.queryParameters['id'] ?? '',
           ) ?? 0;
           return AccountDetailScreen(accountId: id);
+        },
+      ),
+      GoRoute(
+        path: '/goal-detail',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) {
+          final id = int.tryParse(
+            state.uri.queryParameters['id'] ?? '',
+          ) ?? 0;
+          return GoalDetailScreen(goalId: id);
+        },
+      ),
+      GoRoute(
+        path: '/budget-transactions',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) {
+          final categoryName = state.uri.queryParameters['category'] ?? 'other';
+          final budgetId = int.tryParse(
+            state.uri.queryParameters['budgetId'] ?? '',
+          ) ?? 0;
+          final category = TransactionCategory.values.firstWhere(
+            (e) => e.name == categoryName,
+            orElse: () => TransactionCategory.other,
+          );
+          return BudgetTransactionsScreen(budgetId: budgetId, category: category);
         },
       ),
     ],

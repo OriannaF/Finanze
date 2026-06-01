@@ -153,7 +153,7 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(msg), duration: const Duration(seconds: 2)),
       );
-      context.pop();
+      context.go('/');
     }
   }
 

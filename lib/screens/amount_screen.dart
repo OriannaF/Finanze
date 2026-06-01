@@ -24,22 +24,23 @@ class _AmountScreenState extends State<AmountScreen> {
       appBar: AppBar(
         leading: GestureDetector(
           onTap: () => context.pop(),
-          child: Container(
-            margin: const EdgeInsets.only(left: 16),
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: AppColors.surfaceContainerLowest,
-              borderRadius: BorderRadius.circular(20),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.04),
-                  blurRadius: 20,
-                  offset: const Offset(0, 4),
-                ),
-              ],
+          child: Center(
+            child: Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: AppColors.surfaceContainerLowest,
+                borderRadius: BorderRadius.circular(22),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.04),
+                    blurRadius: 20,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: const Icon(Icons.close, color: AppColors.primary, size: 22),
             ),
-            child: const Icon(Icons.close, color: AppColors.primary, size: 22),
           ),
         ),
         centerTitle: true,

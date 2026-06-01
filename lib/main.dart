@@ -14,6 +14,7 @@ import 'providers/settings_provider.dart';
 import 'providers/account_provider.dart';
 import 'theme/app_theme.dart';
 import 'router/app_router.dart';
+import 'utils/seed_data.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -29,10 +30,11 @@ void main() async {
       final db = DatabaseHelper();
       final prefs = await SharedPreferences.getInstance();
 
-      final mockCleaned = prefs.getBool('mockDataCleaned') ?? false;
-      if (!mockCleaned) {
+      final seedLoaded = prefs.getBool('seedDataLoaded') ?? false;
+      if (!seedLoaded) {
         await db.deleteAllData();
-        await prefs.setBool('mockDataCleaned', true);
+        await loadSeedData();
+        await prefs.setBool('seedDataLoaded', true);
       }
 
       onboardingCompleted = prefs.getBool('onboardingCompleted') ?? false;

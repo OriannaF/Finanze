@@ -7,6 +7,8 @@ import '../providers/transaction_provider.dart';
 import '../theme/app_colors.dart';
 import '../utils/currency_formatter.dart';
 
+enum _BalanceAction { register, skip }
+
 const List<String> _allCategoryIcons = [
   'account_balance_wallet', 'savings', 'credit_card', 'payments', 'wallet', 'money',
   'restaurant', 'directions_car', 'shopping_bag', 'bolt', 'local_activity',
@@ -366,28 +368,61 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
                         if (diff != 0) {
                           final oldBalance = account.balance;
                           if (!ctx.mounted) return;
-                          final confirmed = await showDialog<bool>(
+                          final confirmed = await showDialog<_BalanceAction>(
                             context: ctx,
                             builder: (dialogCtx) => AlertDialog(
-                              title: const Text('Cambio de saldo'),
-                              content: Text(
-                                'El saldo cambió de ${formatCurrency(oldBalance)} a ${formatCurrency(newBalance)}.\n'
-                                '¿Querés registrar la diferencia de ${formatCurrency(diff.abs())} como transacción?',
+                              title: Row(
+                                children: [
+                                  Icon(diff > 0 ? Icons.arrow_upward : Icons.arrow_downward, size: 20, color: diff > 0 ? AppColors.green : AppColors.error),
+                                  const SizedBox(width: 8),
+                                  const Text('Ajuste de saldo'),
+                                ],
+                              ),
+                              content: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text('El saldo pasó de ${formatCurrency(oldBalance)} a ${formatCurrency(newBalance)}.'),
+                                  const SizedBox(height: 12),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                                    decoration: BoxDecoration(
+                                      color: (diff > 0 ? AppColors.green : AppColors.error).withValues(alpha: 0.1),
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        Icon(diff > 0 ? Icons.arrow_upward : Icons.arrow_downward, size: 16, color: diff > 0 ? AppColors.green : AppColors.error),
+                                        const SizedBox(width: 8),
+                                        Text(
+                                          '${diff > 0 ? '+' : '-'}${formatCurrency(diff.abs())}',
+                                          style: TextStyle(
+                                            fontSize: 18,
+                                            fontWeight: FontWeight.w700,
+                                            color: diff > 0 ? AppColors.green : AppColors.error,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(height: 12),
+                                  Text('¿Querés registrar esta diferencia como transacción?', style: TextStyle(fontSize: 13, color: AppColors.onSurfaceVariant)),
+                                ],
                               ),
                               actions: [
                                 TextButton(
-                                  onPressed: () => Navigator.of(dialogCtx).pop(false),
-                                  child: const Text('No, solo actualizar',
+                                  onPressed: () => Navigator.of(dialogCtx).pop(_BalanceAction.skip),
+                                  child: const Text('Solo actualizar saldo',
                                       style: TextStyle(color: AppColors.onSurfaceVariant)),
                                 ),
                                 FilledButton(
-                                  onPressed: () => Navigator.of(dialogCtx).pop(true),
-                                  child: const Text('Sí, registrar'),
+                                  onPressed: () => Navigator.of(dialogCtx).pop(_BalanceAction.register),
+                                  child: const Text('Registrar transacción'),
                                 ),
                               ],
                             ),
                           );
-                          if (confirmed == true) {
+                          if (confirmed == _BalanceAction.register) {
                             await context.read<TransactionProvider>().addTransaction(
                               Transaction(
                                 accountId: account.id,
@@ -403,6 +438,8 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
                         await accountProvider.updateAccount(updated);
                         if (!ctx.mounted) return;
                         Navigator.of(ctx).pop();
+                        accountProvider.loadAccounts();
+                        context.read<TransactionProvider>().loadTransactions();
                       },
                       style: FilledButton.styleFrom(
                         backgroundColor: AppColors.primary,

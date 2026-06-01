@@ -25,7 +25,7 @@ class DatabaseHelper {
     return await databaseFactoryFfi.openDatabase(
       path,
       options: OpenDatabaseOptions(
-        version: 9,
+        version: 10,
         onCreate: (db, version) => _onCreate(db, version),
         onUpgrade: (db, oldVersion, newVersion) =>
             _onUpgrade(db, oldVersion, newVersion),
@@ -158,6 +158,14 @@ class DatabaseHelper {
         "ALTER TABLE budgets ADD COLUMN color TEXT DEFAULT '#1E88E5'"
       );
     }
+    if (oldVersion < 10) {
+      await db.execute('DROP TABLE IF EXISTS goal_contributions');
+      await db.execute('DROP TABLE IF EXISTS transactions');
+      await db.execute('DROP TABLE IF EXISTS goals');
+      await db.execute('DROP TABLE IF EXISTS budgets');
+      await db.execute('DROP TABLE IF EXISTS accounts');
+      await _onCreate(db, newVersion);
+    }
   }
 
   // Transactions
@@ -251,6 +259,13 @@ class DatabaseHelper {
   }
 
   // Budgets
+  Future<Budget?> getBudgetById(int id) async {
+    final db = await database;
+    final maps = await db.query('budgets', where: 'id = ?', whereArgs: [id]);
+    if (maps.isEmpty) return null;
+    return Budget.fromMap(maps.first);
+  }
+
   Future<List<Budget>> getBudgets({int? month, int? year}) async {
     final db = await database;
     final now = DateTime.now();
@@ -415,6 +430,7 @@ class DatabaseHelper {
   Future<void> deleteAllData() async {
     final db = await database;
     await db.transaction((txn) async {
+      await txn.delete('goal_contributions');
       await txn.delete('transactions');
       await txn.delete('goals');
       await txn.delete('budgets');
@@ -458,6 +474,17 @@ class DatabaseHelper {
       'transactions',
       where: 'accountId = ?',
       whereArgs: [accountId],
+      orderBy: 'date DESC',
+    );
+    return maps.map((m) => Transaction.fromMap(m)).toList();
+  }
+
+  Future<List<Transaction>> getTransactionsByCategory(String categoryName) async {
+    final db = await database;
+    final maps = await db.query(
+      'transactions',
+      where: 'category = ?',
+      whereArgs: [categoryName],
       orderBy: 'date DESC',
     );
     return maps.map((m) => Transaction.fromMap(m)).toList();
