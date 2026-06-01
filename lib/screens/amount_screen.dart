@@ -60,14 +60,14 @@ class _AmountScreenState extends State<AmountScreen> {
               child: ElevatedButton(
                 onPressed: _amount > 0 ? _onNext : null,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.lilac,
+                  backgroundColor: AppColors.primary,
                   foregroundColor: AppColors.onPrimary,
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(999),
                   ),
                   elevation: 0,
-                  disabledBackgroundColor: AppColors.lilac.withValues(alpha: 0.5),
+                  disabledBackgroundColor: AppColors.primary.withValues(alpha: 0.5),
                 ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,

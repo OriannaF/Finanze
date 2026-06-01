@@ -298,30 +298,29 @@ class _GoalsScreenState extends State<GoalsScreen> {
               const SizedBox(height: 8),
               Row(
                 mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.baseline,
-                textBaseline: TextBaseline.alphabetic,
                 children: [
-                  Text('\$',
+                  const Text('\$',
                       style: TextStyle(
                           fontSize: 32,
                           fontWeight: FontWeight.w700,
                           color: AppColors.primary)),
                   const SizedBox(width: 4),
                   SizedBox(
-                    width: 160,
+                    width: 140,
                     child: TextField(
                       controller: amountCtrl,
                       keyboardType: TextInputType.number,
                       inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[\d.,]'))],
-                      textAlign: TextAlign.center,
+                      textAlign: TextAlign.left,
                       style: TextStyle(
                         fontSize: 32,
                         fontWeight: FontWeight.w700,
                         color: AppColors.primary,
                       ),
                       decoration: const InputDecoration(
-                        hintText: '0.00',
                         border: InputBorder.none,
+                        contentPadding: EdgeInsets.zero,
+                        isDense: true,
                       ),
                     ),
                   ),
@@ -359,48 +358,29 @@ class _GoalsScreenState extends State<GoalsScreen> {
         Text('Ícono', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: AppColors.onSurfaceVariant)),
         const SizedBox(height: 8),
         SizedBox(
-          height: 76,
+          height: 72,
           child: ListView(
             scrollDirection: Axis.horizontal,
-             children: _goalIcons.asMap().entries.map((entry) {
-               final i = entry.key;
-               final icon = entry.value;
-               final isSelected = _iconName(icon) == selectedIcon;
-               final catColor = TransactionCategory.values[i % TransactionCategory.values.length].color;
-               return GestureDetector(
-                 onTap: () => setSheetState(() => selectedIcon = _iconName(icon)),
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            children: _goalIcons.asMap().entries.map((entry) {
+              final i = entry.key;
+              final icon = entry.value;
+              final isSelected = _iconName(icon) == selectedIcon;
+              final catColor = TransactionCategory.values[i % TransactionCategory.values.length].color;
+              return GestureDetector(
+                onTap: () => setSheetState(() => selectedIcon = _iconName(icon)),
                 child: Container(
-                  width: 60,
+                  width: 56,
+                  height: 56,
                   margin: const EdgeInsets.only(right: 12),
-                  child: Column(
-                    children: [
-                      AnimatedContainer(
-                        duration: const Duration(milliseconds: 200),
-                        width: 56,
-                        height: 56,
-                        decoration: BoxDecoration(
-                          color: isSelected
-                              ? catColor
-                              : catColor.withValues(alpha: 0.15),
-                          borderRadius: BorderRadius.circular(28),
-                        ),
-                        child: Icon(icon, size: 22,
-                          color: isSelected ? AppColors.onPrimary : catColor),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        TransactionCategory.values[i % TransactionCategory.values.length].label,
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: isSelected ? catColor : AppColors.onSurfaceVariant,
-                          fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-                        ),
-                        textAlign: TextAlign.center,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
+                  decoration: BoxDecoration(
+                    color: isSelected
+                        ? catColor
+                        : catColor.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(28),
                   ),
+                  child: Icon(icon, size: 22,
+                    color: isSelected ? AppColors.onPrimary : catColor),
                 ),
               );
             }).toList(),
@@ -420,7 +400,7 @@ class _GoalsScreenState extends State<GoalsScreen> {
               const SizedBox(width: 12),
               Expanded(
                 child: Text(
-                  'Fecha límite: ${DateFormat.yMMMd('es').format(selectedDate)}',
+                  'Fecha límite: ${_capMonth(DateFormat.yMMMd('es').format(selectedDate))}',
                   style: TextStyle(fontSize: 15, color: AppColors.onSurface),
                 ),
               ),
@@ -454,7 +434,7 @@ class _GoalsScreenState extends State<GoalsScreen> {
                await ctx.read<GoalProvider>().addGoal(Goal(
                  title: title,
                  targetAmount: amount,
-                 deadline: DateFormat.yMMMd('es').format(selectedDate),
+                 deadline: _capMonth(DateFormat.yMMMd('es').format(selectedDate)),
                  icon: selectedIcon,
                ));
               if (!ctx.mounted) return;
@@ -523,30 +503,29 @@ class _GoalsScreenState extends State<GoalsScreen> {
               const SizedBox(height: 8),
               Row(
                 mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.baseline,
-                textBaseline: TextBaseline.alphabetic,
                 children: [
-                  Text('\$',
+                  const Text('\$',
                       style: TextStyle(
                           fontSize: 32,
                           fontWeight: FontWeight.w700,
                           color: AppColors.primary)),
                   const SizedBox(width: 4),
                   SizedBox(
-                    width: 160,
+                    width: 140,
                     child: TextField(
                       controller: limitCtrl,
                       keyboardType: TextInputType.number,
                       inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[\d.,]'))],
-                      textAlign: TextAlign.center,
+                      textAlign: TextAlign.left,
                       style: TextStyle(
                         fontSize: 32,
                         fontWeight: FontWeight.w700,
                         color: AppColors.primary,
                       ),
                       decoration: const InputDecoration(
-                        hintText: '0.00',
                         border: InputBorder.none,
+                        contentPadding: EdgeInsets.zero,
+                        isDense: true,
                       ),
                     ),
                   ),
@@ -975,6 +954,11 @@ class _GoalsScreenState extends State<GoalsScreen> {
       ),
     );
   }
+
+  String _capMonth(String s) {
+    if (s.isEmpty) return s;
+    return s[0].toUpperCase() + s.substring(1);
+  }
 }
 
 class _GoalCard extends StatelessWidget {
@@ -1002,41 +986,38 @@ class _GoalCard extends StatelessWidget {
           ],
         ),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Row(
-                  children: [
-                    Container(
-                      width: 40,
-                      height: 40,
-                      decoration: BoxDecoration(
-                        color: AppColors.surfaceContainer,
-                        borderRadius: BorderRadius.circular(20),
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: AppColors.surfaceContainer,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Icon(
+                    _iconData(goal.icon),
+                    color: AppColors.primary,
+                    size: 20,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        goal.title,
+                        style: Theme.of(context).textTheme.titleLarge,
                       ),
-                      child: Icon(
-                        _iconData(goal.icon),
-                        color: AppColors.primary,
-                        size: 20,
+                      Text(
+                        goal.deadline,
+                        style: Theme.of(context).textTheme.labelSmall,
                       ),
-                    ),
-                    const SizedBox(width: 12),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          goal.title,
-                          style: Theme.of(context).textTheme.titleLarge,
-                        ),
-                        Text(
-                          goal.deadline,
-                          style: Theme.of(context).textTheme.labelSmall,
-                        ),
-                      ],
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
                 Text(
                   '${(goal.progress * 100).toInt()}%',
@@ -1044,21 +1025,19 @@ class _GoalCard extends StatelessWidget {
                 ),
               ],
             ),
-            const SizedBox(height: 16),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  '${formatCurrency(goal.savedAmount)} ahorrados',
-                  style: Theme.of(context).textTheme.labelSmall,
-                ),
-                Text(
-                  'Meta: ${formatCurrency(goal.targetAmount)}',
-                  style: Theme.of(context).textTheme.labelSmall,
-                ),
-              ],
+            const SizedBox(height: 20),
+            Text(
+              formatCurrency(goal.savedAmount),
+              style: Theme.of(context).textTheme.headlineLarge?.copyWith(
+                fontWeight: FontWeight.w700,
+              ),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 4),
+            Text(
+              'de ${formatCurrency(goal.targetAmount)}',
+              style: Theme.of(context).textTheme.labelSmall,
+            ),
+            const SizedBox(height: 12),
             SimpleProgressBar(progress: goal.progress),
           ],
         ),
@@ -1095,6 +1074,16 @@ class _BudgetItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isOver = budget.isOverBudget;
+    final cat = budget.category;
+    final iconData = cat != null
+        ? _iconForCategory(cat)
+        : Icons.more_horiz;
+    final bgColor = cat != null
+        ? cat.color.withValues(alpha: 0.2)
+        : AppColors.surfaceContainer;
+    final fgColor = cat != null
+        ? cat.color
+        : AppColors.primary;
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -1109,45 +1098,41 @@ class _BudgetItem extends StatelessWidget {
             : null,
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Row(
-                children: [
-                  Container(
-                    width: 32,
-                    height: 32,
-                    decoration: BoxDecoration(
-                      color: isOver
-                          ? AppColors.errorContainer
-                          : AppColors.secondaryFixedDim.withValues(alpha: 0.2),
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Icon(
-                      _iconForCategory(budget.categoryName),
-                      size: 18,
-                      color: isOver
-                          ? AppColors.error
-                          : AppColors.secondaryContainer,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Text(
-                    budget.categoryName,
-                    style: Theme.of(context).textTheme.titleLarge,
-                  ),
-                ],
+              Container(
+                width: 32,
+                height: 32,
+                decoration: BoxDecoration(
+                  color: isOver
+                      ? AppColors.errorContainer
+                      : bgColor,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Icon(
+                  iconData,
+                  size: 18,
+                  color: isOver
+                      ? AppColors.error
+                      : fgColor,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  budget.categoryName,
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
               ),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Text(
-                    isOver
-                        ? '${formatCurrency(budget.remaining.abs())} excedido'
-                        : '${formatCurrency(budget.remaining)} restante',
+                    formatCurrency(budget.spent),
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w700,
                       color: isOver ? AppColors.error : null,
                     ),
                   ),
@@ -1159,22 +1144,40 @@ class _BudgetItem extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 12),
-          SegmentedProgressBar(
-            progress: budget.progress,
-            color: isOver ? AppColors.error : AppColors.secondaryContainer,
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: SegmentedProgressBar(
+                  progress: budget.progress,
+                  color: isOver ? AppColors.error : fgColor,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Text(
+                isOver
+                    ? '${formatCurrency(budget.remaining.abs())} excedido'
+                    : '${formatCurrency(budget.remaining)} restante',
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  color: isOver ? AppColors.error : null,
+                ),
+              ),
+            ],
           ),
         ],
       ),
     );
   }
 
-  IconData _iconForCategory(String name) {
-    switch (name.toLowerCase()) {
-      case 'comestibles': return Icons.shopping_cart;
-      case 'restaurantes': return Icons.restaurant;
-      case 'transporte': return Icons.directions_car;
-      case 'compras': return Icons.shopping_bag;
+  IconData _iconForCategory(TransactionCategory cat) {
+    switch (cat) {
+      case TransactionCategory.food: return Icons.restaurant;
+      case TransactionCategory.transport: return Icons.directions_car;
+      case TransactionCategory.shopping: return Icons.shopping_bag;
+      case TransactionCategory.services: return Icons.bolt;
+      case TransactionCategory.entertainment: return Icons.local_activity;
+      case TransactionCategory.health: return Icons.local_hospital;
+      case TransactionCategory.education: return Icons.school;
       default: return Icons.more_horiz;
     }
   }

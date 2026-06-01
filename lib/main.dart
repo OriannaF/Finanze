@@ -19,6 +19,8 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   Intl.defaultLocale = 'es';
 
+  bool onboardingCompleted = false;
+
   // Web fallback: sqflite_common_ffi no funciona en web
   if (!kIsWeb) {
     sqfliteFfiInit();
@@ -32,6 +34,8 @@ void main() async {
         await db.deleteAllData();
         await prefs.setBool('mockDataCleaned', true);
       }
+
+      onboardingCompleted = prefs.getBool('onboardingCompleted') ?? false;
 
       await db.generateRecurringTransactions();
     } catch (e) {
@@ -52,7 +56,7 @@ void main() async {
         ],
         child: kIsWeb
             ? const UnsupportedPlatformScreen()
-            : const FinanzeApp(initialRoute: '/onboarding'),
+            : FinanzeApp(initialRoute: onboardingCompleted ? '/' : '/onboarding'),
       ),
     ),
   );

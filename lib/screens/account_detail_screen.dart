@@ -5,6 +5,7 @@ import '../data/database_helper.dart';
 import '../models/account.dart';
 import '../models/transaction.dart';
 import '../providers/account_provider.dart';
+import '../providers/transaction_provider.dart';
 import '../theme/app_colors.dart';
 import '../utils/currency_formatter.dart';
 import '../widgets/edit_transaction_bottom_sheet.dart';
@@ -202,12 +203,12 @@ class _AccountDetailScreenState extends State<AccountDetailScreen> {
                           width: 44,
                           height: 44,
                           decoration: BoxDecoration(
-                            color: _colorFromHex(selectedColor),
+                            color: _colorFromHex(selectedColor).withValues(alpha: 0.2),
                             borderRadius: BorderRadius.circular(22),
                           ),
                           child: Icon(
                             _iconDataFromString(selectedIcon),
-                            color: Colors.white,
+                            color: _colorFromHex(selectedColor),
                             size: 22,
                           ),
                         ),
@@ -335,7 +336,7 @@ class _AccountDetailScreenState extends State<AccountDetailScreen> {
                             ),
                           );
                           if (confirmed == true) {
-                            await DatabaseHelper().insertTransaction(
+                            await context.read<TransactionProvider>().addTransaction(
                               Transaction(
                                 accountId: account.id,
                                 title: 'Ajuste de saldo',
@@ -487,15 +488,16 @@ class _AccountDetailScreenState extends State<AccountDetailScreen> {
         automaticallyImplyLeading: false,
         leading: GestureDetector(
           onTap: () => context.pop(),
-          child: Container(
-            margin: const EdgeInsets.only(left: 16),
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: AppColors.surfaceContainerHigh.withValues(alpha: 0.5),
-              borderRadius: BorderRadius.circular(20),
+          child: Center(
+            child: Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: AppColors.surfaceContainerHigh.withValues(alpha: 0.5),
+                borderRadius: BorderRadius.circular(22),
+              ),
+              child: const Icon(Icons.arrow_back, color: AppColors.onSurface, size: 22),
             ),
-            child: const Icon(Icons.arrow_back, color: AppColors.onSurface, size: 22),
           ),
         ),
         title: Text(account?.name ?? 'Cuenta'),
@@ -582,3 +584,7 @@ class _AccountDetailScreenState extends State<AccountDetailScreen> {
     }
   }
 }
+
+
+
+

@@ -21,6 +21,9 @@ class _ActivityScreenState extends State<ActivityScreen> {
   final List<String> _filters = ['Semana', 'Mes', 'Año'];
   final List<String> _periods = ['week', 'month', 'year'];
   TransactionCategory? _filterCategory;
+  DateTime? _selectedDate;
+  DateTime? _rangeStart;
+  DateTime? _rangeEnd;
 
   @override
   void initState() {
@@ -34,8 +37,17 @@ class _ActivityScreenState extends State<ActivityScreen> {
 
   List<Transaction> get _filteredTransactions {
     final tx = context.read<TransactionProvider>().transactions;
-    if (_filterCategory == null) return tx;
-    return tx.where((t) => t.category == _filterCategory).toList();
+    var result = tx;
+    if (_filterCategory != null) {
+      result = result.where((t) => t.category == _filterCategory).toList();
+    }
+    if (_rangeStart != null && _rangeEnd != null) {
+      result = result.where((t) =>
+        t.date.isAfter(_rangeStart!.subtract(const Duration(days: 1))) &&
+        t.date.isBefore(_rangeEnd!.add(const Duration(days: 1)))
+      ).toList();
+    }
+    return result;
   }
 
   @override
@@ -58,9 +70,87 @@ class _ActivityScreenState extends State<ActivityScreen> {
                   options: _filters,
                   selectedIndex: _selectedFilter,
                   onChanged: (i) {
-                    setState(() => _selectedFilter = i);
+                    setState(() {
+                      _selectedFilter = i;
+                      _selectedDate = null;
+                      _rangeStart = null;
+                      _rangeEnd = null;
+                    });
                     provider.loadTransactions(period: _periods[i]);
                   },
+                ),
+                const SizedBox(height: 12),
+                GestureDetector(
+                  onTap: () async {
+                    final picked = await showDatePicker(
+                      context: context,
+                      initialDate: _selectedDate ?? DateTime.now(),
+                      firstDate: DateTime(2000),
+                      lastDate: DateTime.now(),
+                      locale: const Locale('es'),
+                    );
+                    if (picked != null) {
+                      setState(() {
+                        _selectedDate = picked;
+                        _selectedFilter = -1;
+                        _rangeStart = picked.subtract(const Duration(days: 3));
+                        _rangeEnd = picked.add(const Duration(days: 3));
+                      });
+                      provider.loadTransactions();
+                    }
+                  },
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                        decoration: BoxDecoration(
+                          color: _selectedDate != null
+                              ? AppColors.lilac.withValues(alpha: 0.15)
+                              : AppColors.surfaceContainerHighest,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.calendar_today,
+                              size: 16,
+                              color: _selectedDate != null
+                                  ? AppColors.lilac
+                                  : AppColors.onSurfaceVariant,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              _selectedDate != null
+                                  ? '${_rangeStart!.day} ${_monthName(_rangeStart!.month)} - ${_rangeEnd!.day} ${_monthName(_rangeEnd!.month)} ${_rangeEnd!.year}'
+                                  : _rangeText,
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: _selectedDate != null || _selectedFilter >= 0
+                                    ? AppColors.lilac
+                                    : AppColors.onSurfaceVariant,
+                              ),
+                            ),
+                            if (_selectedDate != null) ...[
+                              const SizedBox(width: 4),
+                              GestureDetector(
+                                onTap: () {
+                                  setState(() {
+                                    _selectedDate = null;
+                                    _rangeStart = null;
+                                    _rangeEnd = null;
+                                  });
+                                  provider.loadTransactions(period: _periods[_selectedFilter >= 0 ? _selectedFilter : 0]);
+                                },
+                                child: const Icon(Icons.close, size: 16, color: AppColors.lilac),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
                 const SizedBox(height: 24),
                 if (provider.isLoading)
@@ -85,6 +175,29 @@ class _ActivityScreenState extends State<ActivityScreen> {
         );
       },
     );
+  }
+
+  String get _rangeText {
+    final now = DateTime.now();
+    switch (_selectedFilter) {
+      case 0:
+        final weekAgo = now.subtract(const Duration(days: 7));
+        return '${weekAgo.day} ${_monthName(weekAgo.month)} - ${now.day} ${_monthName(now.month)} ${now.year}';
+      case 1:
+        return '${_monthName(now.month)} ${now.year}';
+      case 2:
+        return '${now.year}';
+      default:
+        return 'Todo';
+    }
+  }
+
+  String _monthName(int month) {
+    const months = [
+      'Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun',
+      'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic',
+    ];
+    return months[month - 1];
   }
 
   Widget _buildTransactionList(TransactionProvider provider) {

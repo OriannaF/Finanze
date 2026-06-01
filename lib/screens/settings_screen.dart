@@ -676,7 +676,7 @@ class _CategoriesScreenState extends State<_CategoriesScreen> {
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) => AlertDialog(
-          title: Text(name == null ? 'Nueva categoría' : 'Editar categoría'),
+          title: Text(name == null ? 'Nueva categor\u00eda' : 'Editar categor\u00eda'),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,

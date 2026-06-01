@@ -156,12 +156,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       Container(
                         width: 44, height: 44,
                         decoration: BoxDecoration(
-                          color: _colorFromHex(selectedColor),
+                          color: _colorFromHex(selectedColor).withValues(alpha: 0.2),
                           borderRadius: BorderRadius.circular(22),
                         ),
                         child: Icon(
                           _iconDataFromString(selectedIcon),
-                          color: Colors.white, size: 22,
+                          color: _colorFromHex(selectedColor), size: 22,
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -258,36 +258,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
   }
 
-  void _showFilterSheet(BuildContext context) {
-    final txProvider = context.read<TransactionProvider>();
-    final currentPeriod = txProvider.selectedPeriod;
-
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-      ),
-      builder: (ctx) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Padding(
-                padding: EdgeInsets.only(bottom: 12),
-                child: Text('Filtrar por período',
-                    style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600)),
-              ),
-              ..._buildFilterOption(ctx, txProvider, currentPeriod, 'all', 'Todo'),
-              ..._buildFilterOption(ctx, txProvider, currentPeriod, 'week', 'Semana'),
-              ..._buildFilterOption(ctx, txProvider, currentPeriod, 'month', 'Mes'),
-              ..._buildFilterOption(ctx, txProvider, currentPeriod, 'year', 'Año'),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
 
   void _showIconPicker(BuildContext sheetContext, String currentIcon, String currentColor, void Function(String) onSelected) {
     showDialog(
@@ -339,32 +309,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  List<Widget> _buildFilterOption(
-    BuildContext ctx,
-    TransactionProvider txProvider,
-    String current,
-    String value,
-    String label,
-  ) {
-    return [
-      const Divider(height: 1),
-      ListTile(
-        leading: Icon(
-          current == value
-              ? Icons.radio_button_checked
-              : Icons.radio_button_off,
-          color: AppColors.primary,
-        ),
-        title: Text(label,
-            style: TextStyle(
-                fontWeight: current == value ? FontWeight.w600 : FontWeight.w400)),
-        onTap: () {
-          txProvider.loadTransactions(period: value == 'all' ? null : value);
-          Navigator.pop(ctx);
-        },
-      ),
-    ];
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -495,32 +439,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ),
                 ),
                 const SizedBox(height: 32),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Últimos registros',
-                      style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                        fontSize: 20,
-                      ),
-                    ),
-                    GestureDetector(
-                      onTap: () => _showFilterSheet(context),
-                      child: Container(
-                        width: 32,
-                        height: 32,
-                        decoration: BoxDecoration(
-                          color: AppColors.surfaceVariant,
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: const Icon(
-                          Icons.filter_list,
-                          size: 16,
-                          color: AppColors.onSurfaceVariant,
-                        ),
-                      ),
-                    ),
-                  ],
+                                Text(
+                  'Últimos registros',
+                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                    fontSize: 20,
+                  ),
                 ),
                 const SizedBox(height: 12),
                 Container(
@@ -595,3 +518,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 }
+
+
+
+
+
+
+

@@ -115,6 +115,50 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                   ),
                 ),
                 const SizedBox(height: 24),
+                // Zoe message - top spending category
+                if (sortedCategories.isNotEmpty)
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: AppColors.surfaceContainerLowest,
+                      borderRadius: BorderRadius.circular(28),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.04),
+                          blurRadius: 20,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      children: [
+                        Image.asset(
+                          'assets/images/zoe_contable.png',
+                          width: 48,
+                          height: 48,
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: RichText(
+                            text: TextSpan(
+                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                color: AppColors.onSurface,
+                              ),
+                              children: [
+                                TextSpan(text: 'Tu categoría con más gastos fue '),
+                                TextSpan(
+                                  text: sortedCategories.first.key.label,
+                                  style: const TextStyle(fontWeight: FontWeight.bold),
+                                ),
+                                const TextSpan(text: '. ¡Prestale atención!'),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                const SizedBox(height: 24),
                 // Category filter
                 Container(
                   padding: const EdgeInsets.all(4),
@@ -380,15 +424,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
             barRods: [
               BarChartRodData(
                 toY: entry.value > 0 ? entry.value : 2,
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: const [
-                    Color(0xFFbda7e0),
-                    Color(0xFFad91d6),
-                    Color(0xFFf3b5c9),
-                  ],
-                ),
+                color: const Color(0xFFbda7e0),
                 width: 16,
                 borderRadius: const BorderRadius.only(
                   topLeft: Radius.circular(4),

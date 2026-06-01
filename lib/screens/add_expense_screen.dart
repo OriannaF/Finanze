@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../data/database_helper.dart';
@@ -80,7 +80,17 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
   Future<void> _loadAccounts() async {
     final accounts = await DatabaseHelper().getAccounts();
     if (mounted) {
-      setState(() => _accounts = accounts);
+      setState(() {
+        _accounts = accounts;
+        if (accounts.length == 1) {
+          _selectedAccount = accounts.first;
+        } else {
+          final defaultId = context.read<SettingsProvider>().defaultAccountId;
+          if (defaultId != null) {
+            _selectedAccount = accounts.where((a) => a.id == defaultId).firstOrNull;
+          }
+        }
+      });
     }
   }
 
@@ -205,92 +215,230 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
     String selectedIcon = 'more_horiz';
     String selectedColor = '#757575';
 
-    showDialog(
+    showModalBottomSheet(
       context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setDialogState) => AlertDialog(
-          title: const Text('Nueva categoría'),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                TextField(
-                  controller: nameCtrl,
-                  autofocus: true,
-                  decoration: const InputDecoration(
-                    hintText: 'Nombre',
-                    border: OutlineInputBorder(),
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return Padding(
+              padding: EdgeInsets.fromLTRB(
+                24,
+                24,
+                24,
+                24 + MediaQuery.of(context).viewInsets.bottom,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Nueva categor\u00eda',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.onSurface,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 16),
-                Text('Ícono', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: AppColors.onSurfaceVariant)),
-                const SizedBox(height: 8),
-                SizedBox(
-                  height: 56,
-                  child: ListView(
-                    scrollDirection: Axis.horizontal,
-                    children: _allCategoryIcons.map((iconName) {
-                      final isSel = selectedIcon == iconName;
-                      return GestureDetector(
-                        onTap: () => setDialogState(() => selectedIcon = iconName),
-                        child: Container(
-                          width: 52, height: 52,
-                          margin: const EdgeInsets.only(right: 8),
+                  const SizedBox(height: 24),
+                  Text(
+                    'Nombre',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                      color: AppColors.onSurfaceVariant,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: nameCtrl,
+                    decoration: InputDecoration(
+                      hintText: 'Ej: Supermercado',
+                      filled: true,
+                      fillColor: AppColors.surfaceContainer,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(14),
+                        borderSide: BorderSide.none,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Icono',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                      color: AppColors.onSurfaceVariant,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  GestureDetector(
+                    onTap: () => _showCategoryIconPicker(
+                      ctx,
+                      selectedIcon,
+                      selectedColor,
+                      (newIcon) => setDialogState(() => selectedIcon = newIcon),
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 44,
+                          height: 44,
                           decoration: BoxDecoration(
-                            color: isSel ? _colorFromHex(selectedColor) : _colorFromHex(selectedColor).withValues(alpha: 0.15),
-                            borderRadius: BorderRadius.circular(26),
+                            color: _colorFromHex(selectedColor).withValues(alpha: 0.2),
+                            borderRadius: BorderRadius.circular(22),
                           ),
                           child: Icon(
-                            _iconFromName(iconName),
+                            _iconFromName(selectedIcon),
+                            color: _colorFromHex(selectedColor),
                             size: 22,
-                            color: isSel ? Colors.white : _colorFromHex(selectedColor),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Text(
+                          'Tocar para elegir \u00edcono',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: AppColors.onSurfaceVariant,
+                          ),
+                        ),
+                        const Spacer(),
+                        const Icon(Icons.chevron_right, color: AppColors.outlineVariant, size: 20),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Color',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                      color: AppColors.onSurfaceVariant,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: accountColors.map((c) {
+                      final hex = '#${c.toARGB32().toRadixString(16).substring(2).toUpperCase()}';
+                      final isSelected = selectedColor == hex;
+                      return Padding(
+                        padding: EdgeInsets.only(
+                          right: c != accountColors.last ? 8 : 0,
+                        ),
+                        child: GestureDetector(
+                          onTap: () => setDialogState(() { selectedColor = hex; }),
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 200),
+                            width: 36,
+                            height: 36,
+                            decoration: BoxDecoration(
+                              color: c,
+                              borderRadius: BorderRadius.circular(18),
+                              border: isSelected
+                                  ? Border.all(color: AppColors.primary, width: 3)
+                                  : null,
+                            ),
+                            child: isSelected
+                                ? const Icon(Icons.check, color: Colors.white, size: 18)
+                                : null,
                           ),
                         ),
                       );
                     }).toList(),
                   ),
-                ),
-                const SizedBox(height: 16),
-                Text('Color', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: AppColors.onSurfaceVariant)),
-                const SizedBox(height: 8),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: accountColors.map((c) {
-                    final hex = '#${c.toARGB32().toRadixString(16).substring(2).toUpperCase()}';
-                    final isSel = selectedColor == hex;
-                    return GestureDetector(
-                      onTap: () => setDialogState(() { selectedColor = hex; }),
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 200),
-                        width: 36, height: 36,
-                        decoration: BoxDecoration(
-                          color: c,
-                          borderRadius: BorderRadius.circular(18),
-                          border: isSel ? Border.all(color: AppColors.primary, width: 3) : null,
+                  const SizedBox(height: 24),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () => Navigator.pop(ctx),
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                          ),
+                          child: const Text('Cancelar'),
                         ),
-                        child: isSel ? const Icon(Icons.check, color: Colors.white, size: 18) : null,
                       ),
-                    );
-                  }).toList(),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: FilledButton(
+                          onPressed: () {
+                            final name = nameCtrl.text.trim();
+                            if (name.isEmpty) return;
+                            context.read<SettingsProvider>().addCustomCategory(name, selectedIcon, selectedColor);
+                            Navigator.pop(ctx);
+                          },
+                          style: FilledButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                          ),
+                          child: const Text('Crear'),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _showCategoryIconPicker(BuildContext sheetContext, String currentIcon, String currentColor, void Function(String) onSelected) {
+    showDialog(
+      context: sheetContext,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Elegir \u00edcono'),
+        content: SizedBox(
+          width: 320,
+          height: 400,
+          child: GridView.builder(
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 6,
+              mainAxisSpacing: 8,
+              crossAxisSpacing: 8,
+            ),
+            itemCount: _allCategoryIcons.length,
+            itemBuilder: (_, i) {
+              final iconName = _allCategoryIcons[i];
+              final isSelected = currentIcon == iconName;
+              final iconColor = _colorFromHex(currentColor);
+              return GestureDetector(
+                onTap: () {
+                  onSelected(iconName);
+                  Navigator.pop(ctx);
+                },
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: isSelected ? iconColor : iconColor.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(12),
+                    border: isSelected ? Border.all(color: iconColor, width: 2) : null,
+                  ),
+                  child: Icon(
+                    _iconFromName(iconName),
+                    size: 24,
+                    color: isSelected ? Colors.white : iconColor,
+                  ),
                 ),
-              ],
-            ),
+              );
+            },
           ),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancelar')),
-            FilledButton(
-              onPressed: () {
-                final name = nameCtrl.text.trim();
-                if (name.isEmpty) return;
-                context.read<SettingsProvider>().addCustomCategory(name, selectedIcon, selectedColor);
-                Navigator.pop(ctx);
-              },
-              child: const Text('Crear'),
-            ),
-          ],
         ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancelar'),
+          ),
+        ],
       ),
     );
   }
@@ -655,14 +803,14 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
               child: ElevatedButton(
                 onPressed: _isSaving ? null : _save,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.lilac,
+                  backgroundColor: AppColors.primary,
                   foregroundColor: AppColors.onPrimary,
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(999),
                   ),
                   elevation: 0,
-                  disabledBackgroundColor: AppColors.lilac.withValues(alpha: 0.5),
+                  disabledBackgroundColor: AppColors.primary.withValues(alpha: 0.5),
                 ),
                 child: _isSaving
                     ? const SizedBox(
@@ -716,6 +864,7 @@ class _CategoryButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final catColor = category.color;
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -727,15 +876,13 @@ class _CategoryButton extends StatelessWidget {
               width: 56,
               height: 56,
               decoration: BoxDecoration(
-                color: isSelected ? AppColors.lilac : AppColors.surfaceContainer,
+                color: isSelected ? catColor : catColor.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(28),
               ),
               child: Icon(
                 _iconForCategory(category),
                 size: 24,
-                color: isSelected
-                    ? AppColors.onPrimary
-                    : AppColors.onSurface,
+                color: isSelected ? Colors.white : catColor,
               ),
             ),
             const SizedBox(height: 4),
@@ -743,9 +890,7 @@ class _CategoryButton extends StatelessWidget {
               category.label,
               style: TextStyle(
                 fontSize: 11,
-                color: isSelected
-                    ? AppColors.primary
-                    : AppColors.onSurfaceVariant,
+                color: isSelected ? catColor : AppColors.onSurfaceVariant,
                 fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
               ),
               textAlign: TextAlign.center,
@@ -776,3 +921,4 @@ class _CategoryButton extends StatelessWidget {
     }
   }
 }
+
