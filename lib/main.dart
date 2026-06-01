@@ -17,19 +17,27 @@ import 'router/app_router.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  sqfliteFfiInit();
   Intl.defaultLocale = 'es';
 
-  final db = DatabaseHelper();
-  final prefs = await SharedPreferences.getInstance();
+  // Web fallback: sqflite_common_ffi no funciona en web
+  if (!kIsWeb) {
+    sqfliteFfiInit();
 
-  final mockCleaned = prefs.getBool('mockDataCleaned') ?? false;
-  if (!mockCleaned) {
-    await db.deleteAllData();
-    await prefs.setBool('mockDataCleaned', true);
+    try {
+      final db = DatabaseHelper();
+      final prefs = await SharedPreferences.getInstance();
+
+      final mockCleaned = prefs.getBool('mockDataCleaned') ?? false;
+      if (!mockCleaned) {
+        await db.deleteAllData();
+        await prefs.setBool('mockDataCleaned', true);
+      }
+
+      await db.generateRecurringTransactions();
+    } catch (e) {
+      debugPrint('Error initializing database: $e');
+    }
   }
-
-  await db.generateRecurringTransactions();
 
   runApp(
     DevicePreview(
@@ -42,10 +50,61 @@ void main() async {
           ChangeNotifierProvider(create: (_) => SettingsProvider()),
           ChangeNotifierProvider(create: (_) => AccountProvider()),
         ],
-        child: const FinanzeApp(initialRoute: '/onboarding'),
+        child: kIsWeb
+            ? const UnsupportedPlatformScreen()
+            : const FinanzeApp(initialRoute: '/onboarding'),
       ),
     ),
   );
+}
+
+class UnsupportedPlatformScreen extends StatelessWidget {
+  const UnsupportedPlatformScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'Finanze',
+      debugShowCheckedModeBanner: false,
+      home: Scaffold(
+        backgroundColor: const Color(0xFFF8F9FA),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(32),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Image.asset(
+                  'assets/images/zoe_icono.png',
+                  width: 120,
+                  height: 120,
+                ),
+                const SizedBox(height: 24),
+                Text(
+                  'Finanze',
+                  style: TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold,
+                    color: const Color(0xFF1E88E5),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'La versión web está en desarrollo.\nDescargá la app nativa para usar Finanze.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 15,
+                    color: Colors.grey[600],
+                    height: 1.5,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class FinanzeApp extends StatelessWidget {
