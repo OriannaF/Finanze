@@ -8,7 +8,8 @@ import '../providers/goal_provider.dart';
 import '../theme/app_colors.dart';
 import '../utils/currency_formatter.dart';
 import '../utils/icon_utils.dart';
-import '../widgets/goal_customizer_sheet.dart';
+import '../widgets/amount_input.dart';
+import 'edit_goal_screen.dart';
 
 class GoalDetailScreen extends StatefulWidget {
   final int goalId;
@@ -76,32 +77,116 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
   void _showAddContribution() {
     final goal = _goal;
     if (goal == null) return;
-    final ctrl = TextEditingController();
-    showDialog(
+    double amount = 0;
+    showModalBottomSheet(
       context: context,
-      builder: (c) => AlertDialog(
-        title: const Text('Aportar a meta'),
-        content: TextField(
-          controller: ctrl,
-          keyboardType: TextInputType.number,
-          autofocus: true,
-          decoration: const InputDecoration(hintText: 'Monto', border: OutlineInputBorder()),
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(c), child: const Text('Cancelar')),
-          FilledButton(
-            onPressed: () {
-              final amount = double.tryParse(ctrl.text);
-              if (amount != null && amount > 0) {
-                context.read<GoalProvider>().addContribution(goal.id!, amount);
-              }
-              Navigator.pop(c);
-              _load();
-            },
-            child: const Text('Agregar'),
-          ),
-        ],
-      ),
+      isScrollControlled: true,
+      backgroundColor: AppColors.background,
+      shape: const RoundedRectangleBorder(),
+      builder: (c) {
+        return StatefulBuilder(
+          builder: (context, setSheetState) {
+            return Padding(
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(context).viewInsets.bottom,
+              ),
+              child: SizedBox(
+                height: MediaQuery.of(context).size.height * 0.75,
+                child: Column(
+                  children: [
+                    // Header
+                    Padding(
+                      padding: const EdgeInsets.only(top: 12, left: 20, right: 20),
+                      child: Row(
+                        children: [
+                          GestureDetector(
+                            onTap: () => Navigator.pop(c),
+                            child: Container(
+                              width: 44, height: 44,
+                              decoration: BoxDecoration(
+                                color: AppColors.surfaceContainerLowest,
+                                borderRadius: BorderRadius.circular(22),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withValues(alpha: 0.04),
+                                    blurRadius: 20,
+                                    offset: const Offset(0, 4),
+                                  ),
+                                ],
+                              ),
+                              child: const Icon(Icons.close, color: AppColors.primary, size: 22),
+                            ),
+                          ),
+                          const Expanded(
+                            child: Center(
+                              child: Text(
+                                'Aportar a meta',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontFamily: 'Inter',
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.onSurface,
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 44),
+                        ],
+                      ),
+                    ),
+                    const Spacer(flex: 2),
+                    AmountInput(
+                      amount: amount,
+                      onChanged: (v) => setSheetState(() => amount = v),
+                    ),
+                    const Spacer(flex: 1),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed: amount > 0
+                              ? () {
+                                  context.read<GoalProvider>().addContribution(goal.id!, amount);
+                                  Navigator.pop(c);
+                                  _load();
+                                }
+                              : null,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primary,
+                            foregroundColor: AppColors.onPrimary,
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(999),
+                            ),
+                            elevation: 0,
+                            disabledBackgroundColor: AppColors.primary.withValues(alpha: 0.5),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text(
+                                'Aportar',
+                                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                                  color: AppColors.onPrimary,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              const Icon(Icons.add_circle_outline, size: 22, color: AppColors.onPrimary),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 32),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
     );
   }
 
@@ -134,87 +219,91 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   child: Row(
                     children: [
-                      GestureDetector(
-                        onTap: () => context.pop(),
-                        child: Container(
-                          width: 40, height: 40,
-                          decoration: BoxDecoration(
-                            color: AppColors.surfaceContainerLow,
-                            borderRadius: BorderRadius.circular(20),
+                      SizedBox(
+                        width: 40,
+                        child: GestureDetector(
+                          onTap: () => context.pop(),
+                          child: Container(
+                            width: 40, height: 40,
+                            decoration: BoxDecoration(
+                              color: AppColors.surfaceContainerLow,
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: const Icon(Icons.arrow_back, color: AppColors.onSurface, size: 20),
                           ),
-                          child: const Icon(Icons.arrow_back, color: AppColors.onSurface, size: 20),
                         ),
                       ),
-                      const Spacer(),
-                      Text(
-                        'Detalles de Meta',
-                        style: TextStyle(
-                          color: AppColors.onSurface,
-                          fontSize: 20,
-                          fontFamily: 'Inter',
-                          fontWeight: FontWeight.w600,
+                      Expanded(
+                        child: Center(
+                          child: Text(
+                            'Detalles de Meta',
+                            style: TextStyle(
+                              color: AppColors.onSurface,
+                              fontSize: 20,
+                              fontFamily: 'Inter',
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
                         ),
                       ),
-                      PopupMenuButton<String>(
-                        offset: const Offset(0, 48),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                        onSelected: (value) async {
-                          if (value == 'customize') {
-                            final result = await GoalCustomizerSheet.show(
-                              context,
-                              currentIcon: goal.icon,
-                              currentColor: goal.colorHex,
-                            );
-                            if (result != null && context.mounted) {
-                              await context.read<GoalProvider>().updateGoal(goal.copyWith(
-                                icon: result.$1,
-                                colorHex: result.$2,
-                              ));
-                              _load();
+                      SizedBox(
+                        width: 40,
+                        child: PopupMenuButton<String>(
+                          offset: const Offset(0, 48),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                          onSelected: (value) async {
+                            if (value == 'edit') {
+                              final result = await Navigator.push<bool>(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => EditGoalScreen(goal: goal),
+                                ),
+                              );
+                              if (result == true) _load();
+                            } else if (value == 'delete') {
+                              final confirmed = await showDialog<bool>(
+                                context: context,
+                                builder: (c) => AlertDialog(
+                                  title: const Text('Eliminar meta'),
+                                  content: Text('¿Eliminar "${goal.title}"? Se borrará todo el historial de aportes.'),
+                                  actions: [
+                                    TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('Cancelar')),
+                                    FilledButton(
+                                      style: FilledButton.styleFrom(backgroundColor: AppColors.error),
+                                      onPressed: () => Navigator.pop(c, true),
+                                      child: const Text('Eliminar'),
+                                    ),
+                                  ],
+                                ),
+                              );
+                              if (confirmed == true) {
+                                await context.read<GoalProvider>().deleteGoal(goal.id!);
+                                if (context.mounted) context.pop();
+                              }
                             }
-                          } else if (value == 'delete') {
-                            final confirmed = await showDialog<bool>(
-                              context: context,
-                              builder: (c) => AlertDialog(
-                                title: const Text('Eliminar meta'),
-                                content: Text('¿Eliminar "${goal.title}"? Se borrará todo el historial de aportes.'),
-                                actions: [
-                                  TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('Cancelar')),
-                                  FilledButton(
-                                    style: FilledButton.styleFrom(backgroundColor: AppColors.error),
-                                    onPressed: () => Navigator.pop(c, true),
-                                    child: const Text('Eliminar'),
-                                  ),
-                                ],
+                          },
+                          itemBuilder: (_) => [
+                            const PopupMenuItem(
+                              value: 'edit',
+                              child: Row(
+                                children: [Icon(Icons.edit_outlined, size: 20, color: AppColors.onSurface), SizedBox(width: 12), Text('Editar')],
                               ),
-                            );
-                            if (confirmed == true) {
-                              await context.read<GoalProvider>().deleteGoal(goal.id!);
-                              if (context.mounted) context.pop();
-                            }
-                          }
-                        },
-                        itemBuilder: (_) => [
-                          const PopupMenuItem(
-                            value: 'customize',
-                            child: Row(
-                              children: [Icon(Icons.palette_outlined, size: 20), SizedBox(width: 12), Text('Personalizar')],
                             ),
-                          ),
-                          const PopupMenuItem(
-                            value: 'delete',
-                            child: Row(
-                              children: [Icon(Icons.delete_outline, size: 20, color: AppColors.error), SizedBox(width: 12), Text('Eliminar', style: TextStyle(color: AppColors.error))],
+                            const PopupMenuItem(
+                              value: 'delete',
+                              child: Row(
+                                children: [Icon(Icons.delete_outline, size: 20, color: AppColors.error), SizedBox(width: 12), Text('Eliminar', style: TextStyle(color: AppColors.error))],
+                              ),
                             ),
+                          ],
+                          child: Container(
+                            width: 40, height: 40,
+                            decoration: BoxDecoration(
+                              color: AppColors.surfaceContainerLow,
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: const Icon(Icons.more_horiz, color: AppColors.onSurface, size: 20),
                           ),
-                        ],
-                        child: Container(
-                          width: 40, height: 40,
-                          decoration: BoxDecoration(
-                            color: AppColors.surfaceContainerLow,
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: const Icon(Icons.more_horiz, color: AppColors.onSurface, size: 20),
                         ),
                       ),
                     ],
@@ -316,7 +405,7 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
-                      formatCurrency(goal.savedAmount),
+                      formatCurrencyWhole(goal.savedAmount),
                       style: TextStyle(
                         color: AppColors.onSurface,
                         fontSize: 36,
@@ -358,7 +447,7 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
                               ),
                             )
                           : Text(
-                              'of ${formatCurrency(goal.targetAmount)}',
+                              'of ${formatCurrencyWhole(goal.targetAmount)}',
                               textAlign: TextAlign.center,
                               style: TextStyle(
                                 color: AppColors.onSurfaceVariant,
@@ -374,61 +463,48 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
             ),
           ),
         ),
-        // Zoe character + speech bubble
+        // Speech bubble overlapping bottom of ring
         Positioned(
-          left: 0,
-          bottom: 0,
-          child: Column(
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(20),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.05),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
+          left: 40,
+          right: 40,
+          bottom: -16,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.05),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
                 ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      '¡Vas por buen camino! 🌸',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontFamily: 'Inter',
-                        fontWeight: FontWeight.w500,
-                        color: AppColors.onSurface,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Transform.translate(
-                offset: const Offset(24, -4),
-                child: Transform.rotate(
-                  angle: 0.4,
-                  child: Container(
-                    width: 12,
-                    height: 12,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      border: Border(
-                        right: BorderSide(color: AppColors.surfaceContainerLow),
-                        bottom: BorderSide(color: AppColors.surfaceContainerLow),
-                      ),
+              ],
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Flexible(
+                  child: Text(
+                    '¡Vas por buen camino! 🌸',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontFamily: 'Inter',
+                      fontWeight: FontWeight.w500,
+                      color: AppColors.onSurface,
                     ),
                   ),
                 ),
-              ),
-              const SizedBox(height: 4),
-              Text('🐱', style: TextStyle(fontSize: 56)),
-            ],
+              ],
+            ),
           ),
+        ),
+        // Zoe character
+        Positioned(
+          left: -20,
+          bottom: -10,
+          child: Image.asset('assets/images/zoe_sentada.png', width: 112, height: 112),
         ),
       ],
     );
@@ -453,7 +529,7 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
                 Text('Falta', style: TextStyle(fontSize: 12, color: AppColors.onSurfaceVariant, fontFamily: 'Inter')),
                 const SizedBox(height: 4),
                 Text(
-                  formatCurrency(remaining),
+                  formatCurrencyWhole(remaining),
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, fontFamily: 'Inter', color: AppColors.onSurface),
                 ),
               ],
@@ -687,7 +763,7 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
               ),
             ),
             Text(
-              '+${formatCurrency(c.amount)}',
+              '+${formatCurrencyWhole(c.amount)}',
               style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w700,

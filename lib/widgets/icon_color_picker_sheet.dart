@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import '../utils/icon_utils.dart';
 
-class GoalCustomizerSheet extends StatefulWidget {
+class IconColorPickerSheet extends StatefulWidget {
   final String currentIcon;
   final String currentColor;
 
-  const GoalCustomizerSheet({
+  const IconColorPickerSheet({
     super.key,
     required this.currentIcon,
     required this.currentColor,
@@ -24,7 +24,7 @@ class GoalCustomizerSheet extends StatefulWidget {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(35)),
       ),
-      builder: (_) => GoalCustomizerSheet(
+      builder: (_) => IconColorPickerSheet(
         currentIcon: currentIcon,
         currentColor: currentColor,
       ),
@@ -32,10 +32,10 @@ class GoalCustomizerSheet extends StatefulWidget {
   }
 
   @override
-  State<GoalCustomizerSheet> createState() => _GoalCustomizerSheetState();
+  State<IconColorPickerSheet> createState() => _IconColorPickerSheetState();
 }
 
-class _GoalCustomizerSheetState extends State<GoalCustomizerSheet> {
+class _IconColorPickerSheetState extends State<IconColorPickerSheet> {
   late String _selectedIcon;
   late String _selectedColor;
 

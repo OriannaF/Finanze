@@ -6,6 +6,7 @@ import '../models/goal.dart';
 import '../providers/goal_provider.dart';
 import '../theme/app_colors.dart';
 import '../utils/icon_utils.dart';
+import '../widgets/icon_color_picker_sheet.dart';
 
 class EditGoalScreen extends StatefulWidget {
   final Goal goal;
@@ -19,23 +20,18 @@ class EditGoalScreen extends StatefulWidget {
 class _EditGoalScreenState extends State<EditGoalScreen> {
   late TextEditingController _nameCtrl;
   late TextEditingController _amountCtrl;
+  late FocusNode _amountFocusNode;
   late String _selectedIcon;
   late String _selectedColor;
   late DateTime _selectedDate;
   bool _isPriority = false;
-
-  static const List<String> _goalIconNames = [
-    'flight_takeoff', 'savings', 'shopping_cart', 'restaurant',
-    'directions_car', 'home', 'school', 'favorite',
-    'card_giftcard', 'trending_up', 'pets', 'devices',
-    'fitness_center', 'book',
-  ];
 
   @override
   void initState() {
     super.initState();
     _nameCtrl = TextEditingController(text: widget.goal.title);
     _amountCtrl = TextEditingController(text: widget.goal.targetAmount.toInt().toString());
+    _amountFocusNode = FocusNode();
     _selectedIcon = widget.goal.icon;
     _selectedColor = widget.goal.colorHex;
     final parsed = DateFormat.yMMMd('es').tryParse(widget.goal.deadline);
@@ -46,6 +42,7 @@ class _EditGoalScreenState extends State<EditGoalScreen> {
   void dispose() {
     _nameCtrl.dispose();
     _amountCtrl.dispose();
+    _amountFocusNode.dispose();
     super.dispose();
   }
 
@@ -91,6 +88,20 @@ class _EditGoalScreenState extends State<EditGoalScreen> {
   String _capMonth(String s) {
     if (s.isEmpty) return s;
     return s[0].toUpperCase() + s.substring(1);
+  }
+
+  Future<void> _openIconPicker() async {
+    final result = await IconColorPickerSheet.show(
+      context,
+      currentIcon: _selectedIcon,
+      currentColor: _selectedColor,
+    );
+    if (result != null && mounted) {
+      setState(() {
+        _selectedIcon = result.$1;
+        _selectedColor = result.$2;
+      });
+    }
   }
 
   @override
@@ -172,44 +183,51 @@ class _EditGoalScreenState extends State<EditGoalScreen> {
                                   ),
                                 ),
                                 const SizedBox(height: 8),
-                                Text(
-                                  '\$ ${_amountCtrl.text.isEmpty ? '0' : _amountCtrl.text}',
-                                  textAlign: TextAlign.center,
-                                  style: TextStyle(
-                                    color: Colors.black,
-                                    fontSize: 34,
-                                    fontFamily: 'Inter',
-                                    fontWeight: FontWeight.w700,
-                                    letterSpacing: -0.85,
+                                GestureDetector(
+                                  onTap: () => FocusScope.of(context).requestFocus(_amountFocusNode),
+                                  child: Text(
+                                    '\$ ${_amountCtrl.text.isEmpty ? '0' : _amountCtrl.text}',
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                      color: Colors.black,
+                                      fontSize: 34,
+                                      fontFamily: 'Inter',
+                                      fontWeight: FontWeight.w700,
+                                      letterSpacing: -0.85,
+                                    ),
                                   ),
                                 ),
-                                const SizedBox(height: 4),
+                                const SizedBox(height: 8),
                                 SizedBox(
                                   width: 180,
                                   child: TextField(
                                     controller: _amountCtrl,
+                                    focusNode: _amountFocusNode,
                                     keyboardType: TextInputType.number,
                                     textAlign: TextAlign.center,
                                     style: TextStyle(
-                                      color: Colors.transparent,
-                                      fontSize: 1,
+                                      color: Colors.black,
+                                      fontSize: 20,
+                                      fontFamily: 'Inter',
+                                      fontWeight: FontWeight.w600,
                                     ),
-                                    decoration: const InputDecoration(
-                                      border: InputBorder.none,
-                                      contentPadding: EdgeInsets.zero,
+                                    decoration: InputDecoration(
+                                      border: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                        borderSide: BorderSide(color: const Color(0xFFCFC4C5)),
+                                      ),
+                                      enabledBorder: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                        borderSide: BorderSide(color: const Color(0xFFCFC4C5)),
+                                      ),
+                                      focusedBorder: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                        borderSide: BorderSide(color: const Color(0xFFB75AE6), width: 2),
+                                      ),
+                                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                                       isDense: true,
                                     ),
                                     onChanged: (_) => setState(() {}),
-                                  ),
-                                ),
-                                Container(
-                                  width: 180,
-                                  height: 2,
-                                  decoration: ShapeDecoration(
-                                    color: const Color(0x7FCFC4C5),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(9999),
-                                    ),
                                   ),
                                 ),
                               ],
@@ -284,56 +302,47 @@ class _EditGoalScreenState extends State<EditGoalScreen> {
                                     ],
                                   ),
                                 ),
-                                const SizedBox(height: 24),
-                                // Icon selector
-                                Padding(
-                                  padding: const EdgeInsets.only(left: 16),
-                                  child: Text(
-                                    'Ícono',
-                                    style: TextStyle(
-                                      color: const Color(0xFF4C4546),
-                                      fontSize: 13,
-                                      fontFamily: 'Inter',
-                                      fontWeight: FontWeight.w500,
-                                      letterSpacing: 0.1,
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(height: 12),
-                                SizedBox(
-                                  height: 80,
-                                  child: ListView.separated(
-                                    scrollDirection: Axis.horizontal,
-                                    itemCount: _goalIconNames.length,
-                                    separatorBuilder: (_, _) => const SizedBox(width: 16),
-                                    itemBuilder: (_, i) {
-                                      final name = _goalIconNames[i];
-                                      final isSelected = _selectedIcon == name;
-                                      return GestureDetector(
-                                        onTap: () => setState(() => _selectedIcon = name),
-                                        child: Container(
-                                          width: 64,
-                                          height: 64,
+                                // Icon + edit button (centered)
+                                Center(
+                                  child: GestureDetector(
+                                    onTap: _openIconPicker,
+                                    child: Stack(
+                                      children: [
+                                        Container(
+                                          width: 56,
+                                          height: 56,
                                           decoration: BoxDecoration(
-                                            color: isSelected
-                                                ? goalColor.withValues(alpha: 0.15)
-                                                : const Color(0xFFEEEDF3),
+                                            color: goalColor.withValues(alpha: 0.15),
                                             borderRadius: BorderRadius.circular(9999),
-                                            border: isSelected
-                                                ? Border.all(color: goalColor, width: 2)
-                                                : Border.all(color: Colors.black.withValues(alpha: 0), width: 1),
-                                            boxShadow: isSelected
-                                                ? [BoxShadow(color: goalColor.withValues(alpha: 0.3), blurRadius: 15)]
-                                                : null,
                                           ),
                                           child: Icon(
-                                            iconDataFromString(name),
+                                            iconDataFromString(_selectedIcon),
                                             size: 26,
-                                            color: isSelected ? goalColor : const Color(0xFF1A1B1F).withValues(alpha: 0.7),
+                                            color: goalColor,
                                           ),
                                         ),
-                                      );
-                                    },
+                                        Positioned(
+                                          right: 0,
+                                          bottom: 0,
+                                          child: Container(
+                                            width: 22,
+                                            height: 22,
+                                            decoration: BoxDecoration(
+                                              color: Colors.white,
+                                              shape: BoxShape.circle,
+                                              boxShadow: [
+                                                BoxShadow(
+                                                  color: Colors.black.withValues(alpha: 0.1),
+                                                  blurRadius: 4,
+                                                  offset: const Offset(0, 2),
+                                                ),
+                                              ],
+                                            ),
+                                            child: const Icon(Icons.edit, size: 13, color: Color(0xFF4C4546)),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
                                   ),
                                 ),
                                 const SizedBox(height: 24),
@@ -473,90 +482,69 @@ class _EditGoalScreenState extends State<EditGoalScreen> {
                               ],
                             ),
                           ),
-                          const SizedBox(height: 24),
-                          // Bottom padding for save/delete
-                          const SizedBox(height: 180),
+                          const SizedBox(height: 32),
+                          // Save button
+                          GestureDetector(
+                            onTap: _save,
+                            child: Container(
+                              width: double.infinity,
+                              height: 56,
+                              decoration: ShapeDecoration(
+                                gradient: const LinearGradient(
+                                  begin: Alignment.centerLeft,
+                                  end: Alignment.centerRight,
+                                  colors: [Color(0xFFB75AE6), Color(0xFF7201A2)],
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(9999),
+                                ),
+                                shadows: const [
+                                  BoxShadow(
+                                    color: Color(0x4CB75AE6),
+                                    blurRadius: 24,
+                                    offset: Offset(0, 8),
+                                  ),
+                                ],
+                              ),
+                              child: const Center(
+                                child: Text(
+                                  'Guardar Cambios',
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 17,
+                                    fontFamily: 'Inter',
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          // Delete button
+                          GestureDetector(
+                            onTap: _delete,
+                            child: SizedBox(
+                              height: 48,
+                              child: Center(
+                                child: Text(
+                                  'Eliminar Meta',
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    color: Color(0xFFBA1A1A),
+                                    fontSize: 15,
+                                    fontFamily: 'Inter',
+                                    fontWeight: FontWeight.w400,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 32),
                         ],
                       ),
                     ),
                   ),
-                ),
-              ),
-              // Bottom actions
-              Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [
-                      const Color(0xFFFAF9FE).withValues(alpha: 0),
-                      const Color(0xFFFAF9FE),
-                      const Color(0xFFFAF9FE),
-                    ],
-                  ),
-                ),
-                padding: const EdgeInsets.fromLTRB(20, 48, 20, 20),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    // Save button
-                    GestureDetector(
-                      onTap: _save,
-                      child: Container(
-                        width: double.infinity,
-                        height: 56,
-                        decoration: ShapeDecoration(
-                          gradient: const LinearGradient(
-                            begin: Alignment.centerLeft,
-                            end: Alignment.centerRight,
-                            colors: [Color(0xFFB75AE6), Color(0xFF7201A2)],
-                          ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(9999),
-                          ),
-                          shadows: const [
-                            BoxShadow(
-                              color: Color(0x4CB75AE6),
-                              blurRadius: 24,
-                              offset: Offset(0, 8),
-                            ),
-                          ],
-                        ),
-                        child: const Center(
-                          child: Text(
-                            'Guardar Cambios',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 17,
-                              fontFamily: 'Inter',
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    // Delete button
-                    GestureDetector(
-                      onTap: _delete,
-                      child: SizedBox(
-                        height: 48,
-                        child: Center(
-                          child: Text(
-                            'Eliminar Meta',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              color: const Color(0xFFBA1A1A),
-                              fontSize: 15,
-                              fontFamily: 'Inter',
-                              fontWeight: FontWeight.w400,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
                 ),
               ),
             ],

@@ -9,7 +9,7 @@ import '../utils/currency_formatter.dart';
 import '../utils/icon_utils.dart';
 import '../widgets/progress_bar.dart';
 import '../widgets/segmented_control.dart';
-import '../widgets/goal_customizer_sheet.dart';
+import '../widgets/icon_color_picker_sheet.dart';
 import '../models/goal.dart';
 import '../models/budget.dart';
 import '../models/transaction.dart';
@@ -125,18 +125,23 @@ class _GoalsScreenState extends State<GoalsScreen> {
                       )
                     else
                       Container(
-                        decoration: BoxDecoration(
-                          color: AppColors.surfaceContainerLowest,
-                          borderRadius: BorderRadius.circular(16),
-                          boxShadow: [
+                        clipBehavior: Clip.antiAlias,
+                        decoration: ShapeDecoration(
+                          color: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          shadows: const [
                             BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.04),
-                              blurRadius: 20,
-                              offset: const Offset(0, 4),
+                              color: Color(0x0A000000),
+                              blurRadius: 12,
+                              offset: Offset(0, 4),
+                              spreadRadius: 0,
                             ),
                           ],
                         ),
                         child: Column(
+                          mainAxisSize: MainAxisSize.min,
                           children: provider.budgets.map((budget) {
                             final isLast = budget == provider.budgets.last;
                             return _BudgetItem(
@@ -851,7 +856,7 @@ class _GoalsScreenState extends State<GoalsScreen> {
                       Expanded(
                         child: OutlinedButton.icon(
                           onPressed: () async {
-                            final result = await GoalCustomizerSheet.show(
+                            final result = await IconColorPickerSheet.show(
                               ctx,
                               currentIcon: currentGoal.icon,
                               currentColor: currentGoal.colorHex,
@@ -988,80 +993,145 @@ class _GoalCard extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        margin: const EdgeInsets.only(bottom: 16),
-        padding: const EdgeInsets.all(24),
-        decoration: BoxDecoration(
-          color: AppColors.surfaceContainerLowest,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
+        width: double.infinity,
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(16),
+        decoration: ShapeDecoration(
+          color: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          shadows: const [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.04),
-              blurRadius: 20,
-              offset: const Offset(0, 4),
+              color: Color(0x0A000000),
+              blurRadius: 12,
+              offset: Offset(0, 4),
+              spreadRadius: 0,
             ),
           ],
         ),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: goalColor.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Icon(
-                    iconDataFromString(goal.icon),
-                    color: goalColor,
-                    size: 20,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        goal.title,
-                        style: Theme.of(context).textTheme.titleLarge,
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Container(
+                      width: 40,
+                      height: 40,
+                      decoration: ShapeDecoration(
+                        color: goalColor.withValues(alpha: 0.15),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(9999),
+                        ),
                       ),
-                      Text(
-                        goal.deadline,
-                        style: Theme.of(context).textTheme.labelSmall,
+                      child: Icon(
+                        iconDataFromString(goal.icon),
+                        size: 20,
+                        color: goalColor,
                       ),
-                    ],
-                  ),
+                    ),
+                    const SizedBox(width: 12),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          goal.title,
+                          style: const TextStyle(
+                            color: Color(0xFF191C1D),
+                            fontSize: 16,
+                            fontFamily: 'Inter',
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        Text(
+                          goal.deadline,
+                          style: const TextStyle(
+                            color: Color(0xFF4C4546),
+                            fontSize: 11,
+                            fontFamily: 'Inter',
+                            fontWeight: FontWeight.w500,
+                            letterSpacing: 0.12,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
                 Text(
                   '${(goal.progress * 100).toInt()}%',
-                  style: Theme.of(context).textTheme.titleLarge,
+                  style: const TextStyle(
+                    color: Color(0xFF191C1D),
+                    fontSize: 16,
+                    fontFamily: 'Inter',
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ],
             ),
-            const SizedBox(height: 20),
-            Text(
-              formatCurrency(goal.savedAmount),
-              style: Theme.of(context).textTheme.headlineLarge?.copyWith(
-                fontWeight: FontWeight.w700,
+            const SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  formatCurrencyWhole(goal.savedAmount),
+                  style: const TextStyle(
+                    color: Color(0xFF4C4546),
+                    fontSize: 14,
+                    fontFamily: 'Inter',
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                Text(
+                  '${formatCurrencyWhole(goal.targetAmount)}',
+                  style: const TextStyle(
+                    color: Color(0xFF9E9E9E),
+                    fontSize: 14,
+                    fontFamily: 'Inter',
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Container(
+              width: double.infinity,
+              height: 6,
+              clipBehavior: Clip.antiAlias,
+              decoration: ShapeDecoration(
+                color: const Color(0xFFF3F4F5),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(9999),
+                ),
+              ),
+              child: FractionallySizedBox(
+                alignment: Alignment.centerLeft,
+                widthFactor: goal.progress.clamp(0.0, 1.0),
+                child: Container(
+                  decoration: ShapeDecoration(
+                    color: Colors.black,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(9999),
+                    ),
+                  ),
+                ),
               ),
             ),
-            const SizedBox(height: 4),
-            Text(
-              'de ${formatCurrency(goal.targetAmount)}',
-              style: Theme.of(context).textTheme.labelSmall,
-            ),
-            const SizedBox(height: 12),
-            SimpleProgressBar(progress: goal.progress),
           ],
         ),
       ),
     );
   }
-
 }
+// But you held me down with those words, you held me down
+// I'm not a girl who gives up like that
+// No, I'm not that girl
 
 class _BudgetItem extends StatelessWidget {
   final Budget budget;
@@ -1077,96 +1147,131 @@ class _BudgetItem extends StatelessWidget {
         ? _iconForCategory(cat)
         : Icons.more_horiz;
     final bgColor = cat != null
-        ? cat.color.withValues(alpha: 0.2)
-        : AppColors.surfaceContainer;
-    final fgColor = cat != null
         ? cat.color
         : AppColors.primary;
+    final progress = budget.progress.clamp(0.0, 1.0);
 
     return GestureDetector(
       onTap: onTap,
       child: Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        border: isLast
-            ? null
-            : const Border(
-                bottom: BorderSide(color: AppColors.surfaceContainer, width: 1),
-              ),
-        borderRadius: isLast
-            ? const BorderRadius.vertical(bottom: Radius.circular(16))
-            : null,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Row(
-            children: [
-              Container(
-                width: 32,
-                height: 32,
-                decoration: BoxDecoration(
-                  color: isOver
-                      ? AppColors.errorContainer
-                      : bgColor,
-                  borderRadius: BorderRadius.circular(16),
+        width: double.infinity,
+        padding: const EdgeInsets.all(24),
+        decoration: ShapeDecoration(
+          shape: RoundedRectangleBorder(
+            side: BorderSide(
+              width: 1,
+              color: isLast
+                  ? Colors.transparent
+                  : const Color(0x19CFC4C5),
+            ),
+          ),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 48,
+                      height: 48,
+                      decoration: ShapeDecoration(
+                        color: isOver
+                            ? const Color(0xFFFFDAD6)
+                            : bgColor.withValues(alpha: 0.2),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(9999),
+                        ),
+                      ),
+                      child: Icon(
+                        iconData,
+                        size: 22,
+                        color: isOver ? AppColors.error : bgColor,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Text(
+                      budget.categoryName,
+                      style: const TextStyle(
+                        color: Color(0xFF191C1D),
+                        fontSize: 18,
+                        fontFamily: 'Inter',
+                        fontWeight: FontWeight.w600,
+                        height: 1.33,
+                      ),
+                    ),
+                  ],
                 ),
-                child: Icon(
-                  iconData,
-                  size: 18,
-                  color: isOver
-                      ? AppColors.error
-                      : fgColor,
+                Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      formatCurrencyWhole(budget.spent),
+                      textAlign: TextAlign.right,
+                      style: TextStyle(
+                        color: isOver ? AppColors.error : Colors.black,
+                        fontSize: 18,
+                        fontFamily: 'Inter',
+                        fontWeight: FontWeight.w600,
+                        height: 1.33,
+                      ),
+                    ),
+                    Text(
+                      'de ${formatCurrencyWhole(budget.limit)}',
+                      textAlign: TextAlign.right,
+                      style: const TextStyle(
+                        color: Color(0xFF4C4546),
+                        fontSize: 12,
+                        fontFamily: 'Inter',
+                        fontWeight: FontWeight.w500,
+                        height: 1.33,
+                        letterSpacing: 0.12,
+                      ),
+                    ),
+                  ],
                 ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: SegmentedProgressBar(
+                progress: progress,
+                color: isOver ? AppColors.error : bgColor,
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  budget.categoryName,
-                  style: Theme.of(context).textTheme.titleLarge,
-                ),
-              ),
-              Column(
+            ),
+            const SizedBox(height: 4),
+            SizedBox(
+              width: double.infinity,
+              child: Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Text(
-                    formatCurrency(budget.spent),
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.w700,
-                      color: isOver ? AppColors.error : null,
+                    isOver
+                        ? '${formatCurrencyWhole(budget.remaining.abs())} excedido'
+                        : '${formatCurrencyWhole(budget.remaining)} restante',
+                    textAlign: TextAlign.right,
+                    style: TextStyle(
+                      color: isOver ? AppColors.error : const Color(0xFF4C4546),
+                      fontSize: 12,
+                      fontFamily: 'Inter',
+                      fontWeight: FontWeight.w500,
+                      height: 1.33,
+                      letterSpacing: 0.12,
                     ),
-                  ),
-                  Text(
-                    'de ${formatCurrency(budget.limit)}',
-                    style: Theme.of(context).textTheme.labelSmall,
                   ),
                 ],
               ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              Expanded(
-                child: SegmentedProgressBar(
-                  progress: budget.progress,
-                  color: isOver ? AppColors.error : fgColor,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Text(
-                isOver
-                    ? '${formatCurrency(budget.remaining.abs())} excedido'
-                    : '${formatCurrency(budget.remaining)} restante',
-                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: isOver ? AppColors.error : null,
-                ),
-              ),
-            ],
-          ),
-        ],
+            ),
+          ],
+        ),
       ),
-    ),
     );
   }
 

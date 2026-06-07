@@ -15,6 +15,13 @@ String formatCurrency(double amount) {
   return '$sign\$$formatted';
 }
 
+String formatCurrencyWhole(double amount) {
+  final abs = amount.abs();
+  final formatted = NumberFormat('#,##0', _numberLocale).format(abs);
+  final sign = amount < 0 ? '-' : '';
+  return '$sign\$$formatted';
+}
+
 String formatCompactCurrency(double amount) {
   final sign = amount < 0 ? '-' : '';
   final abs = amount.abs();
