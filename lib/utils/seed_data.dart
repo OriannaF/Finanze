@@ -69,15 +69,7 @@ Future<void> loadSeedData() async {
   addTx(debitoId, 'Librería', 2000, 'education', 'expense', 20);
 
   // ── Goals ──
-  final goal1Id = await d.insert('goals', {
-    'title': 'Viaje a Europa',
-    'targetAmount': 500000,
-    'savedAmount': 125000,
-    'deadline': 'Dic 2026',
-    'icon': 'flight_takeoff',
-    'colorHex': '0xFF1E88E5',
-  });
-  final goal2Id = await d.insert('goals', {
+  final goalId = await d.insert('goals', {
     'title': 'Fondo de emergencia',
     'targetAmount': 200000,
     'savedAmount': 80000,
@@ -88,19 +80,13 @@ Future<void> loadSeedData() async {
 
   // ── Goal Contributions ──
   await d.insert('goal_contributions', {
-    'goalId': goal1Id, 'amount': 50000, 'date': '2026-05-10T12:00:00.000',
+    'goalId': goalId, 'amount': 20000, 'date': '2026-03-15T12:00:00.000',
   });
   await d.insert('goal_contributions', {
-    'goalId': goal1Id, 'amount': 75000, 'date': '2026-06-05T12:00:00.000',
+    'goalId': goalId, 'amount': 30000, 'date': '2026-04-20T12:00:00.000',
   });
   await d.insert('goal_contributions', {
-    'goalId': goal2Id, 'amount': 20000, 'date': '2026-03-15T12:00:00.000',
-  });
-  await d.insert('goal_contributions', {
-    'goalId': goal2Id, 'amount': 30000, 'date': '2026-04-20T12:00:00.000',
-  });
-  await d.insert('goal_contributions', {
-    'goalId': goal2Id, 'amount': 30000, 'date': '2026-06-01T12:00:00.000',
+    'goalId': goalId, 'amount': 30000, 'date': '2026-06-01T12:00:00.000',
   });
 
   // ── Budgets ──

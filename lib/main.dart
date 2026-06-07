@@ -15,6 +15,7 @@ import 'providers/account_provider.dart';
 import 'theme/app_theme.dart';
 import 'router/app_router.dart';
 import 'utils/seed_data.dart';
+import 'widgets/device_screenshot.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -46,7 +47,9 @@ void main() async {
   }
 
   runApp(
-    DevicePreview(
+    ScreenCapture(
+      enabled: !kReleaseMode,
+      child: DevicePreview(
       enabled: !kReleaseMode,
       builder: (context) => MultiProvider(
         providers: [
@@ -60,6 +63,7 @@ void main() async {
             ? const UnsupportedPlatformScreen()
             : FinanzeApp(initialRoute: onboardingCompleted ? '/' : '/onboarding'),
       ),
+    ),
     ),
   );
 }
