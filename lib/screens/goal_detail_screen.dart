@@ -3,54 +3,13 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../data/database_helper.dart';
-import '../models/account.dart';
 import '../models/goal.dart';
 import '../providers/goal_provider.dart';
 import '../theme/app_colors.dart';
 import '../utils/currency_formatter.dart';
+import '../utils/icon_utils.dart';
 import '../widgets/progress_bar.dart';
-
-IconData _goalIconData(String name) {
-  switch (name) {
-    case 'flight_takeoff': return Icons.flight_takeoff;
-    case 'savings': return Icons.savings;
-    case 'shopping_cart': return Icons.shopping_cart;
-    case 'restaurant': return Icons.restaurant;
-    case 'directions_car': return Icons.directions_car;
-    case 'home': return Icons.home;
-    case 'school': return Icons.school;
-    case 'favorite': return Icons.favorite;
-    case 'card_giftcard': return Icons.card_giftcard;
-    case 'trending_up': return Icons.trending_up;
-    case 'pets': return Icons.pets;
-    case 'devices': return Icons.devices;
-    case 'fitness_center': return Icons.fitness_center;
-    case 'book': return Icons.book;
-    default: return Icons.flag;
-  }
-}
-
-const Map<String, IconData> _goalIconMap = {
-  'flight_takeoff': Icons.flight_takeoff,
-  'savings': Icons.savings,
-  'shopping_cart': Icons.shopping_cart,
-  'restaurant': Icons.restaurant,
-  'directions_car': Icons.directions_car,
-  'home': Icons.home,
-  'school': Icons.school,
-  'favorite': Icons.favorite,
-  'card_giftcard': Icons.card_giftcard,
-  'trending_up': Icons.trending_up,
-  'pets': Icons.pets,
-  'devices': Icons.devices,
-  'fitness_center': Icons.fitness_center,
-  'book': Icons.book,
-};
-
-Color _colorFromHex(String hex) {
-  hex = hex.replaceFirst('#', '');
-  return Color(int.parse('FF$hex', radix: 16));
-}
+import 'edit_goal_screen.dart';
 
 class GoalDetailScreen extends StatefulWidget {
   final int goalId;
@@ -64,6 +23,7 @@ class GoalDetailScreen extends StatefulWidget {
 class _GoalDetailScreenState extends State<GoalDetailScreen> {
   Goal? _goal;
   List<GoalContribution> _contributions = [];
+  bool _showAllContributions = false;
 
   @override
   void initState() {
@@ -82,174 +42,35 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
     });
   }
 
-  void _showEditDialog() {
+  void _showAddContribution() {
     final goal = _goal;
     if (goal == null) return;
-
-    String selectedIcon = goal.icon;
-    final raw = goal.colorHex.replaceFirst('0x', '');
-    String selectedColor = '#${raw.substring(2)}';
-    final nameCtrl = TextEditingController(text: goal.title);
-    final amountCtrl = TextEditingController(text: goal.targetAmount.toInt().toString());
-
+    final ctrl = TextEditingController();
     showDialog(
       context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setDialogState) => AlertDialog(
-          title: const Text('Editar meta'),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                TextField(
-                  controller: nameCtrl,
-                  decoration: const InputDecoration(
-                    hintText: 'Nombre de la meta',
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: amountCtrl,
-                  keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(
-                    hintText: 'Monto objetivo',
-                    border: OutlineInputBorder(),
-                    prefixText: r'$ ',
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Text('Ícono', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: AppColors.onSurfaceVariant)),
-                const SizedBox(height: 8),
-                GestureDetector(
-                  onTap: () => _showGoalIconPicker(ctx, selectedIcon, selectedColor, (newIcon) {
-                    setDialogState(() => selectedIcon = newIcon);
-                  }),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 44,
-                        height: 44,
-                        decoration: BoxDecoration(
-                          color: _colorFromHex(selectedColor).withValues(alpha: 0.2),
-                          borderRadius: BorderRadius.circular(22),
-                        ),
-                        child: Icon(
-                          _goalIconData(selectedIcon),
-                          color: _colorFromHex(selectedColor),
-                          size: 22,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Text('Tocar para elegir ícono',
-                          style: TextStyle(fontSize: 14, color: AppColors.onSurfaceVariant)),
-                      const Spacer(),
-                      const Icon(Icons.chevron_right, color: AppColors.outlineVariant, size: 20),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Text('Color', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: AppColors.onSurfaceVariant)),
-                const SizedBox(height: 8),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: accountColors.map((c) {
-                    final hex = '#${c.toARGB32().toRadixString(16).substring(2).toUpperCase()}';
-                    final isSel = selectedColor == hex;
-                    return GestureDetector(
-                      onTap: () => setDialogState(() => selectedColor = hex),
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 200),
-                        width: 36,
-                        height: 36,
-                        decoration: BoxDecoration(
-                          color: c,
-                          borderRadius: BorderRadius.circular(18),
-                          border: isSel ? Border.all(color: AppColors.primary, width: 3) : null,
-                        ),
-                        child: isSel ? const Icon(Icons.check, color: Colors.white, size: 18) : null,
-                      ),
-                    );
-                  }).toList(),
-                ),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('Cancelar'),
-            ),
-            FilledButton(
-              onPressed: () {
-                final newName = nameCtrl.text.trim();
-                final newAmount = double.tryParse(amountCtrl.text);
-                if (newName.isEmpty || newAmount == null || newAmount <= 0) return;
-                final colorHex = '0xFF${selectedColor.replaceFirst('#', '')}';
-                context.read<GoalProvider>().updateGoal(goal.copyWith(
-                  title: newName,
-                  targetAmount: newAmount,
-                  icon: selectedIcon,
-                  colorHex: colorHex,
-                ));
-                Navigator.pop(ctx);
-                _load();
-              },
-              child: const Text('Guardar'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _showGoalIconPicker(BuildContext sheetContext, String currentIcon, String currentColor, void Function(String) onSelected) {
-    final iconNames = _goalIconMap.keys.toList();
-    showDialog(
-      context: sheetContext,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Elegir ícono'),
-        content: SizedBox(
-          width: 320,
-          height: 400,
-          child: GridView.builder(
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 6,
-              mainAxisSpacing: 8,
-              crossAxisSpacing: 8,
-            ),
-            itemCount: iconNames.length,
-            itemBuilder: (_, i) {
-              final iconName = iconNames[i];
-              final isSelected = currentIcon == iconName;
-              final iconColor = _colorFromHex(currentColor);
-              return GestureDetector(
-                onTap: () {
-                  onSelected(iconName);
-                  Navigator.pop(ctx);
-                },
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: isSelected ? iconColor : iconColor.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(12),
-                    border: isSelected ? Border.all(color: iconColor, width: 2) : null,
-                  ),
-                  child: Icon(
-                    _goalIconData(iconName),
-                    size: 24,
-                    color: isSelected ? Colors.white : iconColor,
-                  ),
-                ),
-              );
-            },
+      builder: (c) => AlertDialog(
+        title: const Text('Aportar a meta'),
+        content: TextField(
+          controller: ctrl,
+          keyboardType: TextInputType.number,
+          autofocus: true,
+          decoration: const InputDecoration(
+            hintText: 'Monto',
+            border: OutlineInputBorder(),
           ),
         ),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancelar'),
+          TextButton(onPressed: () => Navigator.pop(c), child: const Text('Cancelar')),
+          FilledButton(
+            onPressed: () {
+              final amount = double.tryParse(ctrl.text);
+              if (amount != null && amount > 0) {
+                context.read<GoalProvider>().addContribution(goal.id!, amount);
+              }
+              Navigator.pop(c);
+              _load();
+            },
+            child: const Text('Agregar'),
           ),
         ],
       ),
@@ -261,168 +82,547 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
     final goal = _goal;
 
     return Scaffold(
-      appBar: AppBar(
-        automaticallyImplyLeading: false,
-        leading: GestureDetector(
-          onTap: () => context.pop(),
-          child: Center(
-            child: Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color: AppColors.surfaceContainerHigh.withValues(alpha: 0.5),
-                borderRadius: BorderRadius.circular(22),
-              ),
-              child: const Icon(Icons.arrow_back, color: AppColors.onSurface, size: 22),
-            ),
+      body: Container(
+        width: double.infinity,
+        decoration: BoxDecoration(
+          gradient: RadialGradient(
+            center: const Alignment(1.0, 0.0),
+            radius: 1.41,
+            colors: [
+              const Color(0xFFF1D6FF),
+              const Color(0x00F1D6FF),
+            ],
           ),
         ),
-        title: Text(goal?.title ?? 'Meta'),
-        actions: [
-          if (goal != null)
-            GestureDetector(
-              onTap: _showEditDialog,
-              child: Container(
-                margin: const EdgeInsets.only(right: 16),
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: AppColors.surfaceContainerHigh.withValues(alpha: 0.5),
-                  borderRadius: BorderRadius.circular(20),
+        child: goal == null
+            ? const Center(child: Text('Meta no encontrada'))
+            : SafeArea(
+                child: SingleChildScrollView(
+                  child: Column(
+                    children: [
+                      // Header
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                        child: Row(
+                          children: [
+                            GestureDetector(
+                              onTap: () => context.pop(),
+                              child: Container(
+                                width: 44,
+                                height: 44,
+                                decoration: BoxDecoration(
+                                  color: AppColors.surfaceContainerHigh.withValues(alpha: 0.5),
+                                  borderRadius: BorderRadius.circular(22),
+                                ),
+                                child: const Icon(Icons.arrow_back, color: AppColors.onSurface, size: 22),
+                              ),
+                            ),
+                            const Spacer(),
+                            Text(
+                              'Detalles de Meta',
+                              style: TextStyle(
+                                color: Colors.black,
+                                fontSize: 20,
+                                fontFamily: 'Inter',
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            PopupMenuButton<String>(
+                              offset: const Offset(0, 48),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              onSelected: (value) async {
+                                if (value == 'edit') {
+                                  final goal = _goal;
+                                  if (goal == null) return;
+                                  final result = await Navigator.push<bool>(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => EditGoalScreen(goal: goal),
+                                    ),
+                                  );
+                                  if (result == true) _load();
+                                } else if (value == 'delete') {
+                                  final goal = _goal;
+                                  if (goal == null) return;
+                                  final confirmed = await showDialog<bool>(
+                                    context: context,
+                                    builder: (c) => AlertDialog(
+                                      title: const Text('Eliminar meta'),
+                                      content: Text('¿Eliminar "${goal.title}"? Se borrará todo el historial de aportes.'),
+                                      actions: [
+                                        TextButton(
+                                          onPressed: () => Navigator.pop(c, false),
+                                          child: const Text('Cancelar'),
+                                        ),
+                                        FilledButton(
+                                          style: FilledButton.styleFrom(backgroundColor: AppColors.error),
+                                          onPressed: () => Navigator.pop(c, true),
+                                          child: const Text('Eliminar'),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                  if (confirmed == true) {
+                                    await context.read<GoalProvider>().deleteGoal(goal.id!);
+                                    if (context.mounted) context.pop();
+                                  }
+                                }
+                              },
+                              itemBuilder: (_) => [
+                                const PopupMenuItem(
+                                  value: 'edit',
+                                  child: Row(
+                                    children: [
+                                      Icon(Icons.edit_outlined, size: 20, color: AppColors.onSurface),
+                                      SizedBox(width: 12),
+                                      Text('Editar'),
+                                    ],
+                                  ),
+                                ),
+                                const PopupMenuItem(
+                                  value: 'delete',
+                                  child: Row(
+                                    children: [
+                                      Icon(Icons.delete_outline, size: 20, color: AppColors.error),
+                                      SizedBox(width: 12),
+                                      Text('Eliminar', style: TextStyle(color: AppColors.error)),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                              child: Container(
+                                width: 44,
+                                height: 44,
+                                decoration: BoxDecoration(
+                                  color: AppColors.surfaceContainerHigh.withValues(alpha: 0.5),
+                                  borderRadius: BorderRadius.circular(22),
+                                ),
+                                child: const Icon(Icons.more_horiz, color: AppColors.onSurface, size: 22),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 600),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 20),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // Goal title
+                              Center(
+                                child: Text(
+                                  goal.title,
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    color: Colors.black,
+                                    fontSize: 34,
+                                    fontFamily: 'Inter',
+                                    fontWeight: FontWeight.w700,
+                                    letterSpacing: -0.5,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                              // Amount display
+                              Center(
+                                child: Column(
+                                  children: [
+                                    Text(
+                                      formatCurrency(goal.savedAmount),
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(
+                                        color: Colors.black,
+                                        fontSize: 34,
+                                        fontFamily: 'Inter',
+                                        fontWeight: FontWeight.w700,
+                                        letterSpacing: -0.5,
+                                      ),
+                                    ),
+                                    Text(
+                                      'of ${formatCurrency(goal.targetAmount)}',
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(
+                                        color: const Color(0xFF4C4546),
+                                        fontSize: 13,
+                                        fontFamily: 'Inter',
+                                        fontWeight: FontWeight.w500,
+                                        letterSpacing: 0.1,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              // Progress bar
+                              Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 32),
+                                child: SimpleProgressBar(progress: goal.progress),
+                              ),
+                              const SizedBox(height: 8),
+                              // Percentage badge
+                              Center(
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                                  decoration: ShapeDecoration(
+                                    color: colorFromHex(goal.colorHex).withValues(alpha: 0.1),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(9999),
+                                    ),
+                                  ),
+                                  child: Text(
+                                    '${(goal.progress * 100).toInt()}% consumido',
+                                    style: TextStyle(
+                                      color: colorFromHex(goal.colorHex),
+                                      fontSize: 13,
+                                      fontFamily: 'Inter',
+                                      fontWeight: FontWeight.w500,
+                                      letterSpacing: 0.1,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 32),
+                              // Info cards row: remaining + deadline
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: Container(
+                                      padding: const EdgeInsets.all(24),
+                                      decoration: ShapeDecoration(
+                                        color: Colors.white,
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(32),
+                                        ),
+                                        shadows: const [
+                                          BoxShadow(
+                                            color: Color(0x0A000000),
+                                            blurRadius: 20,
+                                            offset: Offset(0, 4),
+                                          ),
+                                        ],
+                                      ),
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            'Falta',
+                                            style: TextStyle(
+                                              color: const Color(0xFF4C4546),
+                                              fontSize: 13,
+                                              fontFamily: 'Inter',
+                                              fontWeight: FontWeight.w500,
+                                              letterSpacing: 0.1,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            formatCurrency((goal.targetAmount - goal.savedAmount).clamp(0, double.infinity)),
+                                            style: TextStyle(
+                                              color: Colors.black,
+                                              fontSize: 17,
+                                              fontFamily: 'Inter',
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Container(
+                                      padding: const EdgeInsets.all(24),
+                                      decoration: ShapeDecoration(
+                                        color: Colors.white,
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(32),
+                                        ),
+                                        shadows: const [
+                                          BoxShadow(
+                                            color: Color(0x0A000000),
+                                            blurRadius: 20,
+                                            offset: Offset(0, 4),
+                                          ),
+                                        ],
+                                      ),
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            'Fecha Límite',
+                                            style: TextStyle(
+                                              color: const Color(0xFF4C4546),
+                                              fontSize: 13,
+                                              fontFamily: 'Inter',
+                                              fontWeight: FontWeight.w500,
+                                              letterSpacing: 0.1,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            goal.deadline,
+                                            style: TextStyle(
+                                              color: Colors.black,
+                                              fontSize: 17,
+                                              fontFamily: 'Inter',
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 24),
+                              // Aportar button
+                              SizedBox(
+                                width: double.infinity,
+                                child: GestureDetector(
+                                  onTap: _showAddContribution,
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(vertical: 16),
+                                    decoration: ShapeDecoration(
+                                      color: const Color(0xFFB75AE6),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(9999),
+                                      ),
+                                      shadows: const [
+                                        BoxShadow(
+                                          color: Color(0x4CB75AE6),
+                                          blurRadius: 24,
+                                          offset: Offset(0, 8),
+                                        ),
+                                      ],
+                                    ),
+                                    child: Row(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        Text(
+                                          'Aportar',
+                                          style: TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 17,
+                                            fontFamily: 'Inter',
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 32),
+                              // Activity section
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    'Actividad',
+                                    style: TextStyle(
+                                      color: Colors.black,
+                                      fontSize: 20,
+                                      fontFamily: 'Inter',
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  if (_contributions.length > 3)
+                                    GestureDetector(
+                                      onTap: () {
+                                        setState(() => _showAllContributions = !_showAllContributions);
+                                      },
+                                      child: Text(
+                                        _showAllContributions ? 'Ver menos' : 'Ver todo',
+                                        textAlign: TextAlign.center,
+                                        style: TextStyle(
+                                          color: const Color(0xFFB75AE6),
+                                          fontSize: 13,
+                                          fontFamily: 'Inter',
+                                          fontWeight: FontWeight.w500,
+                                          letterSpacing: 0.1,
+                                        ),
+                                      ),
+                                    ),
+                                ],
+                              ),
+                              const SizedBox(height: 12),
+                              // Contributions list
+                              if (_contributions.isEmpty)
+                                Container(
+                                  width: double.infinity,
+                                  padding: const EdgeInsets.all(24),
+                                  decoration: ShapeDecoration(
+                                    color: Colors.white,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(48),
+                                    ),
+                                    shadows: const [
+                                      BoxShadow(
+                                        color: Color(0x0A000000),
+                                        blurRadius: 20,
+                                        offset: Offset(0, 4),
+                                      ),
+                                    ],
+                                  ),
+                                  child: const Text(
+                                    'Sin aportes aún',
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(color: AppColors.onSurfaceVariant),
+                                  ),
+                                )
+                              else
+                                Container(
+                                  width: double.infinity,
+                                  decoration: ShapeDecoration(
+                                    color: Colors.white,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(48),
+                                    ),
+                                    shadows: const [
+                                      BoxShadow(
+                                        color: Color(0x0A000000),
+                                        blurRadius: 20,
+                                        offset: Offset(0, 4),
+                                      ),
+                                    ],
+                                  ),
+                                  child: Column(
+                                    children: _buildContributionTiles(),
+                                  ),
+                                ),
+                              const SizedBox(height: 24),
+                              // ZoeIA insight
+                              Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.all(24),
+                                clipBehavior: Clip.antiAlias,
+                                decoration: ShapeDecoration(
+                                  gradient: RadialGradient(
+                                    center: const Alignment(0.0, 0.0),
+                                    radius: 1.41,
+                                    colors: [
+                                      const Color(0xFFF6D9FF),
+                                      const Color(0x00F6D9FF),
+                                    ],
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(32),
+                                  ),
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'En dos semanas llegarías a tu meta con este ritmo ',
+                                      style: TextStyle(
+                                        color: Colors.black,
+                                        fontSize: 22,
+                                        fontFamily: 'Inter',
+                                        fontWeight: FontWeight.w600,
+                                        letterSpacing: -0.2,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      'ZoeIA',
+                                      style: TextStyle(
+                                        color: const Color(0xFF4C4546),
+                                        fontSize: 15,
+                                        fontFamily: 'Inter',
+                                        fontWeight: FontWeight.w400,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(height: 32),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-                child: const Icon(Icons.edit_outlined, color: AppColors.primary, size: 22),
               ),
-            ),
-        ],
       ),
-      body: goal == null
-          ? const Center(child: Text('Meta no encontrada'))
-          : SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
+    );
+  }
+
+  List<Widget> _buildContributionTiles() {
+    final displayList = _showAllContributions
+        ? _contributions
+        : _contributions.take(3).toList();
+
+    return List.generate(displayList.length, (i) {
+      final c = displayList[i];
+      final isLast = i == displayList.length - 1;
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(16),
+        decoration: isLast
+            ? null
+            : ShapeDecoration(
+                shape: RoundedRectangleBorder(
+                  side: BorderSide(width: 1, color: const Color(0xFFEEEDF3)),
+                ),
+              ),
+        child: Row(
+          children: [
+            Container(
+              width: 48,
+              height: 48,
+              decoration: ShapeDecoration(
+                color: const Color(0xFFEEEDF3),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(9999),
+                ),
+              ),
+              child: const Icon(Icons.arrow_upward, size: 20, color: AppColors.green),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const SizedBox(height: 16),
-                  Center(
-                    child: Column(
-                      children: [
-                        Container(
-                          width: 64,
-                          height: 64,
-                          decoration: BoxDecoration(
-                            color: AppColors.surfaceContainer,
-                            borderRadius: BorderRadius.circular(32),
-                          ),
-                          child: Icon(
-                            _goalIconData(goal.icon),
-                            color: AppColors.primary,
-                            size: 32,
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        Text(
-                          formatCurrency(goal.savedAmount),
-                          style: Theme.of(context).textTheme.displayLarge,
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'de ${formatCurrency(goal.targetAmount)}',
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: AppColors.onSurfaceVariant,
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 32),
-                          child: SimpleProgressBar(progress: goal.progress),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          '${(goal.progress * 100).toInt()}% · ${goal.deadline}',
-                          style: Theme.of(context).textTheme.labelSmall,
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 32),
                   Text(
-                    'Historial de aportes',
-                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                      fontSize: 20,
+                    'Aporte',
+                    style: TextStyle(
+                      color: const Color(0xFF1A1B1F),
+                      fontSize: 17,
+                      fontFamily: 'Inter',
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
-                  const SizedBox(height: 12),
-                  if (_contributions.isEmpty)
-                    const Center(
-                      child: Padding(
-                        padding: EdgeInsets.all(32),
-                        child: Text('Sin aportes aún',
-                            style: TextStyle(color: AppColors.onSurfaceVariant)),
-                      ),
-                    )
-                  else
-                    ..._contributions.map((c) => Column(
-                          children: [
-                            _ContributionTile(contribution: c),
-                            if (c != _contributions.last)
-                              const Divider(indent: 64, endIndent: 16),
-                          ],
-                        )),
-                  const SizedBox(height: 32),
+                  Text(
+                    DateFormat.yMd('es').add_Hm().format(c.date),
+                    style: TextStyle(
+                      color: const Color(0xFF4C4546),
+                      fontSize: 11,
+                      fontFamily: 'Inter',
+                      fontWeight: FontWeight.w400,
+                      letterSpacing: 0.3,
+                    ),
+                  ),
                 ],
               ),
             ),
-    );
-  }
-}
-
-class _ContributionTile extends StatelessWidget {
-  final GoalContribution contribution;
-
-  const _ContributionTile({required this.contribution});
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-      child: Row(
-        children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: AppColors.greenBg,
-              borderRadius: BorderRadius.circular(20),
+            Text(
+              '+${formatCurrency(c.amount)}',
+              textAlign: TextAlign.right,
+              style: TextStyle(
+                color: AppColors.green,
+                fontSize: 17,
+                fontFamily: 'Inter',
+                fontWeight: FontWeight.w600,
+              ),
             ),
-            child: const Icon(Icons.arrow_upward, size: 20, color: AppColors.green),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Aporte',
-                  style: Theme.of(context).textTheme.titleLarge,
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  DateFormat.yMd('es').add_Hm().format(contribution.date),
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    fontSize: 13,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Text(
-            '+${formatCurrency(contribution.amount)}',
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-              color: AppColors.green,
-            ),
-          ),
-        ],
-      ),
-    );
+          ],
+        ),
+      );
+    });
   }
 }

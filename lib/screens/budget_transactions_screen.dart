@@ -1,55 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../data/database_helper.dart';
-import '../models/account.dart';
 import '../models/budget.dart';
 import '../models/transaction.dart';
 import '../providers/goal_provider.dart';
 import '../theme/app_colors.dart';
 import '../utils/currency_formatter.dart';
-import '../widgets/transaction_tile.dart';
-
-const List<String> _budgetIcons = [
-  'restaurant', 'directions_car', 'shopping_bag', 'bolt', 'local_activity',
-  'local_hospital', 'school', 'payments', 'code', 'trending_up', 'home',
-  'card_giftcard', 'more_horiz', 'flight_takeoff', 'savings', 'shopping_cart',
-  'favorite', 'pets', 'devices', 'fitness_center', 'book', 'wallet', 'money',
-];
-
-IconData _budgetIconData(String name) {
-  const map = {
-    'restaurant': Icons.restaurant,
-    'directions_car': Icons.directions_car,
-    'shopping_bag': Icons.shopping_bag,
-    'bolt': Icons.bolt,
-    'local_activity': Icons.local_activity,
-    'local_hospital': Icons.local_hospital,
-    'school': Icons.school,
-    'payments': Icons.payments,
-    'code': Icons.code,
-    'trending_up': Icons.trending_up,
-    'home': Icons.home,
-    'card_giftcard': Icons.card_giftcard,
-    'more_horiz': Icons.more_horiz,
-    'flight_takeoff': Icons.flight_takeoff,
-    'savings': Icons.savings,
-    'shopping_cart': Icons.shopping_cart,
-    'favorite': Icons.favorite,
-    'pets': Icons.pets,
-    'devices': Icons.devices,
-    'fitness_center': Icons.fitness_center,
-    'book': Icons.book,
-    'wallet': Icons.wallet,
-    'money': Icons.money,
-  };
-  return map[name] ?? Icons.more_horiz;
-}
-
-Color _colorFromHex(String hex) {
-  hex = hex.replaceFirst('#', '');
-  return Color(int.parse('FF$hex', radix: 16));
-}
+import 'edit_budget_screen.dart';
 
 class BudgetTransactionsScreen extends StatefulWidget {
   final int budgetId;
@@ -68,6 +27,7 @@ class BudgetTransactionsScreen extends StatefulWidget {
 class _BudgetTransactionsScreenState extends State<BudgetTransactionsScreen> {
   Budget? _budget;
   List<Transaction> _transactions = [];
+  bool _showAll = false;
 
   @override
   void initState() {
@@ -85,175 +45,17 @@ class _BudgetTransactionsScreenState extends State<BudgetTransactionsScreen> {
     });
   }
 
-  void _showEditDialog() {
-    final budget = _budget;
-    if (budget == null) return;
-
-    final nameCtrl = TextEditingController(text: budget.categoryName);
-    final limitCtrl = TextEditingController(text: budget.limit.toInt().toString());
-    String selectedIcon = budget.icon;
-    String selectedColor = budget.color;
-
-    showDialog(
-      context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setDialogState) => AlertDialog(
-          title: const Text('Editar presupuesto'),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                TextField(
-                  controller: nameCtrl,
-                  decoration: const InputDecoration(
-                    hintText: 'Nombre del presupuesto',
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: limitCtrl,
-                  keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(
-                    hintText: 'Límite mensual',
-                    border: OutlineInputBorder(),
-                    prefixText: r'$ ',
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Text('Ícono', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: AppColors.onSurfaceVariant)),
-                const SizedBox(height: 8),
-                GestureDetector(
-                  onTap: () => _showIconPicker(ctx, selectedIcon, selectedColor, (newIcon) {
-                    setDialogState(() => selectedIcon = newIcon);
-                  }),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 44,
-                        height: 44,
-                        decoration: BoxDecoration(
-                          color: _colorFromHex(selectedColor).withValues(alpha: 0.2),
-                          borderRadius: BorderRadius.circular(22),
-                        ),
-                        child: Icon(
-                          _budgetIconData(selectedIcon),
-                          color: _colorFromHex(selectedColor),
-                          size: 22,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Text('Tocar para elegir ícono',
-                          style: TextStyle(fontSize: 14, color: AppColors.onSurfaceVariant)),
-                      const Spacer(),
-                      const Icon(Icons.chevron_right, color: AppColors.outlineVariant, size: 20),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Text('Color', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: AppColors.onSurfaceVariant)),
-                const SizedBox(height: 8),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: accountColors.map((c) {
-                    final hex = '#${c.toARGB32().toRadixString(16).substring(2).toUpperCase()}';
-                    final isSel = selectedColor == hex;
-                    return GestureDetector(
-                      onTap: () => setDialogState(() => selectedColor = hex),
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 200),
-                        width: 36,
-                        height: 36,
-                        decoration: BoxDecoration(
-                          color: c,
-                          borderRadius: BorderRadius.circular(18),
-                          border: isSel ? Border.all(color: AppColors.primary, width: 3) : null,
-                        ),
-                        child: isSel ? const Icon(Icons.check, color: Colors.white, size: 18) : null,
-                      ),
-                    );
-                  }).toList(),
-                ),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('Cancelar'),
-            ),
-            FilledButton(
-              onPressed: () {
-                final newName = nameCtrl.text.trim();
-                final newLimit = double.tryParse(limitCtrl.text);
-                if (newName.isEmpty || newLimit == null || newLimit <= 0) return;
-                context.read<GoalProvider>().updateBudget(budget.copyWith(
-                  categoryName: newName,
-                  limit: newLimit,
-                  icon: selectedIcon,
-                  color: selectedColor,
-                ));
-                Navigator.pop(ctx);
-                _load();
-              },
-              child: const Text('Guardar'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _showIconPicker(BuildContext sheetContext, String currentIcon, String currentColor, void Function(String) onSelected) {
-    showDialog(
-      context: sheetContext,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Elegir ícono'),
-        content: SizedBox(
-          width: 320,
-          height: 400,
-          child: GridView.builder(
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 6,
-              mainAxisSpacing: 8,
-              crossAxisSpacing: 8,
-            ),
-            itemCount: _budgetIcons.length,
-            itemBuilder: (_, i) {
-              final iconName = _budgetIcons[i];
-              final isSelected = currentIcon == iconName;
-              final iconColor = _colorFromHex(currentColor);
-              return GestureDetector(
-                onTap: () {
-                  onSelected(iconName);
-                  Navigator.pop(ctx);
-                },
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: isSelected ? iconColor : iconColor.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(12),
-                    border: isSelected ? Border.all(color: iconColor, width: 2) : null,
-                  ),
-                  child: Icon(
-                    _budgetIconData(iconName),
-                    size: 24,
-                    color: isSelected ? Colors.white : iconColor,
-                  ),
-                ),
-              );
-            },
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancelar'),
-          ),
-        ],
-      ),
-    );
+  IconData _iconForCategory(TransactionCategory cat) {
+    switch (cat) {
+      case TransactionCategory.food: return Icons.restaurant;
+      case TransactionCategory.transport: return Icons.directions_car;
+      case TransactionCategory.shopping: return Icons.shopping_bag;
+      case TransactionCategory.services: return Icons.bolt;
+      case TransactionCategory.entertainment: return Icons.local_activity;
+      case TransactionCategory.health: return Icons.local_hospital;
+      case TransactionCategory.education: return Icons.school;
+      default: return Icons.more_horiz;
+    }
   }
 
   @override
@@ -261,91 +63,455 @@ class _BudgetTransactionsScreenState extends State<BudgetTransactionsScreen> {
     final budget = _budget;
 
     return Scaffold(
-      appBar: AppBar(
-        automaticallyImplyLeading: false,
-        leading: GestureDetector(
-          onTap: () => context.pop(),
-          child: Center(
-            child: Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color: AppColors.surfaceContainerHigh.withValues(alpha: 0.5),
-                borderRadius: BorderRadius.circular(22),
-              ),
-              child: const Icon(Icons.arrow_back, color: AppColors.onSurface, size: 22),
-            ),
+      body: Container(
+        width: double.infinity,
+        decoration: BoxDecoration(
+          gradient: RadialGradient(
+            center: const Alignment(1.0, 0.0),
+            radius: 1.41,
+            colors: [
+              const Color(0xFFF1D6FF),
+              const Color(0x00F1D6FF),
+            ],
           ),
         ),
-        title: Text(budget?.categoryName ?? widget.category.label),
-        actions: [
-          if (budget != null)
-            GestureDetector(
-              onTap: _showEditDialog,
-              child: Container(
-                margin: const EdgeInsets.only(right: 16),
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: AppColors.surfaceContainerHigh.withValues(alpha: 0.5),
-                  borderRadius: BorderRadius.circular(20),
+        child: budget == null
+            ? const Center(child: Text('Presupuesto no encontrado'))
+            : SafeArea(
+                child: SingleChildScrollView(
+                  child: Column(
+                    children: [
+                      // Header
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                        child: Row(
+                          children: [
+                            GestureDetector(
+                              onTap: () => context.pop(),
+                              child: Container(
+                                width: 44,
+                                height: 44,
+                                decoration: BoxDecoration(
+                                  color: AppColors.surfaceContainerHigh.withValues(alpha: 0.5),
+                                  borderRadius: BorderRadius.circular(22),
+                                ),
+                                child: const Icon(Icons.arrow_back, color: AppColors.onSurface, size: 22),
+                              ),
+                            ),
+                            const Spacer(),
+                            Text(
+                              'Detalles de Presupuesto',
+                              style: TextStyle(
+                                color: Colors.black,
+                                fontSize: 20,
+                                fontFamily: 'Inter',
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            PopupMenuButton<String>(
+                              offset: const Offset(0, 48),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              onSelected: (value) async {
+                                final budget = _budget;
+                                if (budget == null) return;
+                                if (value == 'edit') {
+                                  final result = await Navigator.push<bool>(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => EditBudgetScreen(budget: budget),
+                                    ),
+                                  );
+                                  if (result == true) _load();
+                                } else if (value == 'delete') {
+                                  final confirmed = await showDialog<bool>(
+                                    context: context,
+                                    builder: (c) => AlertDialog(
+                                      title: const Text('Eliminar presupuesto'),
+                                      content: Text('¿Eliminar el presupuesto "${budget.categoryName}"?'),
+                                      actions: [
+                                        TextButton(
+                                          onPressed: () => Navigator.pop(c, false),
+                                          child: const Text('Cancelar'),
+                                        ),
+                                        FilledButton(
+                                          style: FilledButton.styleFrom(backgroundColor: AppColors.error),
+                                          onPressed: () => Navigator.pop(c, true),
+                                          child: const Text('Eliminar'),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                  if (confirmed == true) {
+                                    await context.read<GoalProvider>().deleteBudget(budget.id!);
+                                    if (context.mounted) context.pop();
+                                  }
+                                }
+                              },
+                              itemBuilder: (_) => [
+                                const PopupMenuItem(
+                                  value: 'edit',
+                                  child: Row(
+                                    children: [
+                                      Icon(Icons.edit_outlined, size: 20, color: AppColors.onSurface),
+                                      SizedBox(width: 12),
+                                      Text('Editar'),
+                                    ],
+                                  ),
+                                ),
+                                const PopupMenuItem(
+                                  value: 'delete',
+                                  child: Row(
+                                    children: [
+                                      Icon(Icons.delete_outline, size: 20, color: AppColors.error),
+                                      SizedBox(width: 12),
+                                      Text('Eliminar', style: TextStyle(color: AppColors.error)),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                              child: Container(
+                                width: 44,
+                                height: 44,
+                                decoration: BoxDecoration(
+                                  color: AppColors.surfaceContainerHigh.withValues(alpha: 0.5),
+                                  borderRadius: BorderRadius.circular(22),
+                                ),
+                                child: const Icon(Icons.more_horiz, color: AppColors.onSurface, size: 22),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 600),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 20),
+                          child: Column(
+                            children: [
+                              const SizedBox(height: 32),
+                              // Amount display
+                              Center(
+                                child: Column(
+                                  children: [
+                                    Text(
+                                      formatCurrency(budget.spent),
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(
+                                        color: Colors.black,
+                                        fontSize: 34,
+                                        fontFamily: 'Inter',
+                                        fontWeight: FontWeight.w700,
+                                        letterSpacing: -0.5,
+                                      ),
+                                    ),
+                                    Text(
+                                      'gastados de ${formatCurrency(budget.limit)}',
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(
+                                        color: const Color(0xFF4C4546),
+                                        fontSize: 13,
+                                        fontFamily: 'Inter',
+                                        fontWeight: FontWeight.w500,
+                                        letterSpacing: 0.1,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                              // Percentage badge
+                              Center(
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                                  decoration: ShapeDecoration(
+                                    color: budget.category!.color.withValues(alpha: 0.1),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(9999),
+                                    ),
+                                  ),
+                                  child: Text(
+                                    '${(budget.progress * 100).toInt()}% consumido',
+                                    style: TextStyle(
+                                      color: budget.category!.color,
+                                      fontSize: 13,
+                                      fontFamily: 'Inter',
+                                      fontWeight: FontWeight.w500,
+                                      letterSpacing: 0.1,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 32),
+                              // Warning card
+                              Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.all(16),
+                                decoration: ShapeDecoration(
+                                  color: Colors.white,
+                                  shape: RoundedRectangleBorder(
+                                    side: BorderSide(width: 1, color: const Color(0xFFE9E7ED)),
+                                    borderRadius: BorderRadius.circular(16),
+                                  ),
+                                  shadows: const [
+                                    BoxShadow(
+                                      color: Color(0x19000000),
+                                      blurRadius: 6,
+                                      offset: Offset(0, 4),
+                                      spreadRadius: -4,
+                                    ),
+                                    BoxShadow(
+                                      color: Color(0x19000000),
+                                      blurRadius: 15,
+                                      offset: Offset(0, 10),
+                                      spreadRadius: -3,
+                                    ),
+                                  ],
+                                ),
+                                child: Text.rich(
+                                  TextSpan(
+                                    children: [
+                                      TextSpan(
+                                        text: '¡Cuidado! Te queda el\n',
+                                        style: TextStyle(
+                                          color: const Color(0xFF1A1B1F),
+                                          fontSize: 15,
+                                          fontFamily: 'Inter',
+                                          fontWeight: FontWeight.w400,
+                                        ),
+                                      ),
+                                      TextSpan(
+                                        text: '${((1 - budget.progress) * 100).toInt()}%',
+                                        style: TextStyle(
+                                          color: budget.category!.color,
+                                          fontSize: 15,
+                                          fontFamily: 'Inter',
+                                          fontWeight: FontWeight.w400,
+                                        ),
+                                      ),
+                                      TextSpan(
+                                        text: ' para el resto del\nmes. ¡Tú puedes!',
+                                        style: TextStyle(
+                                          color: const Color(0xFF1A1B1F),
+                                          fontSize: 15,
+                                          fontFamily: 'Inter',
+                                          fontWeight: FontWeight.w400,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 32),
+                              // Activity section
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    'Actividad',
+                                    style: TextStyle(
+                                      color: Colors.black,
+                                      fontSize: 20,
+                                      fontFamily: 'Inter',
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  if (_transactions.length > 3)
+                                    GestureDetector(
+                                      onTap: () => setState(() => _showAll = !_showAll),
+                                      child: Text(
+                                        _showAll ? 'Ver menos' : 'Ver todo',
+                                        textAlign: TextAlign.center,
+                                        style: TextStyle(
+                                          color: budget.category!.color,
+                                          fontSize: 13,
+                                          fontFamily: 'Inter',
+                                          fontWeight: FontWeight.w500,
+                                          letterSpacing: 0.1,
+                                        ),
+                                      ),
+                                    ),
+                                ],
+                              ),
+                              const SizedBox(height: 12),
+                              // Transactions list
+                              if (_transactions.isEmpty)
+                                Container(
+                                  width: double.infinity,
+                                  padding: const EdgeInsets.all(24),
+                                  decoration: ShapeDecoration(
+                                    color: Colors.white,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(48),
+                                    ),
+                                    shadows: const [
+                                      BoxShadow(
+                                        color: Color(0x0A000000),
+                                        blurRadius: 20,
+                                        offset: Offset(0, 4),
+                                      ),
+                                    ],
+                                  ),
+                                  child: const Text(
+                                    'Sin transacciones en esta categoría',
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(color: AppColors.onSurfaceVariant),
+                                  ),
+                                )
+                              else
+                                Container(
+                                  width: double.infinity,
+                                  decoration: ShapeDecoration(
+                                    color: Colors.white,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(48),
+                                    ),
+                                    shadows: const [
+                                      BoxShadow(
+                                        color: Color(0x0A000000),
+                                        blurRadius: 20,
+                                        offset: Offset(0, 4),
+                                      ),
+                                    ],
+                                  ),
+                                  child: Column(
+                                    children: _buildTransactionTiles(),
+                                  ),
+                                ),
+                              const SizedBox(height: 24),
+                              // ZoeIA insight
+                              Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.all(24),
+                                clipBehavior: Clip.antiAlias,
+                                decoration: ShapeDecoration(
+                                  gradient: RadialGradient(
+                                    center: const Alignment(0.0, 0.0),
+                                    radius: 1.41,
+                                    colors: [
+                                      const Color(0xFFF6D9FF),
+                                      const Color(0x00F6D9FF),
+                                    ],
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(32),
+                                  ),
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'En una semana se terminaría tu presupuesto a este ritmo',
+                                      style: TextStyle(
+                                        color: Colors.black,
+                                        fontSize: 22,
+                                        fontFamily: 'Inter',
+                                        fontWeight: FontWeight.w600,
+                                        letterSpacing: -0.2,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      'ZoeIA',
+                                      style: TextStyle(
+                                        color: const Color(0xFF4C4546),
+                                        fontSize: 15,
+                                        fontFamily: 'Inter',
+                                        fontWeight: FontWeight.w400,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(height: 32),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-                child: const Icon(Icons.edit_outlined, color: AppColors.primary, size: 22),
+              ),
+      ),
+    );
+  }
+
+  List<Widget> _buildTransactionTiles() {
+    final displayList = _showAll
+        ? _transactions
+        : _transactions.take(3).toList();
+
+    return List.generate(displayList.length, (i) {
+      final tx = displayList[i];
+      final isLast = i == displayList.length - 1;
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(16),
+        decoration: isLast
+            ? null
+            : ShapeDecoration(
+                shape: RoundedRectangleBorder(
+                  side: BorderSide(width: 1, color: const Color(0xFFEEEDF3)),
+                ),
+              ),
+        child: Row(
+          children: [
+            Container(
+              width: 48,
+              height: 48,
+              decoration: ShapeDecoration(
+                color: const Color(0xFFEEEDF3),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(9999),
+                ),
+              ),
+              child: Icon(
+                _iconForCategory(widget.category),
+                size: 20,
+                color: widget.category.color,
               ),
             ),
-        ],
-      ),
-      body: budget == null
-          ? const Center(child: Text('Presupuesto no encontrado'))
-          : SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
+            const SizedBox(width: 16),
+            Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const SizedBox(height: 16),
-                  Center(
-                    child: Text(
-                      formatCurrency(budget.spent),
-                      style: Theme.of(context).textTheme.displayLarge,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Center(
-                    child: Text(
-                      'de ${formatCurrency(budget.limit)}',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: AppColors.onSurfaceVariant,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 32),
                   Text(
-                    'Transacciones recientes',
-                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                      fontSize: 20,
+                    tx.title,
+                    style: TextStyle(
+                      color: const Color(0xFF1A1B1F),
+                      fontSize: 17,
+                      fontFamily: 'Inter',
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
-                  const SizedBox(height: 12),
-                  if (_transactions.isEmpty)
-                    const Center(
-                      child: Padding(
-                        padding: EdgeInsets.all(32),
-                        child: Text('Sin transacciones en esta categoría',
-                            style: TextStyle(color: AppColors.onSurfaceVariant)),
-                      ),
-                    )
-                  else
-                    ..._transactions.map((tx) => Column(
-                          children: [
-                            TransactionTile(transaction: tx),
-                            if (tx != _transactions.last)
-                              const Divider(indent: 64, endIndent: 16),
-                          ],
-                        )),
-                  const SizedBox(height: 32),
+                  Text(
+                    DateFormat.yMd('es').add_Hm().format(tx.date),
+                    style: TextStyle(
+                      color: const Color(0xFF4C4546),
+                      fontSize: 11,
+                      fontFamily: 'Inter',
+                      fontWeight: FontWeight.w400,
+                      letterSpacing: 0.3,
+                    ),
+                  ),
                 ],
               ),
             ),
-    );
+            Text(
+              '-${formatCurrency(tx.amount)}',
+              textAlign: TextAlign.right,
+              style: TextStyle(
+                color: const Color(0xFFBA1A1A),
+                fontSize: 17,
+                fontFamily: 'Inter',
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+      );
+    });
   }
 }

@@ -6,8 +6,10 @@ import 'package:intl/intl.dart';
 import '../providers/goal_provider.dart';
 import '../theme/app_colors.dart';
 import '../utils/currency_formatter.dart';
+import '../utils/icon_utils.dart';
 import '../widgets/progress_bar.dart';
 import '../widgets/segmented_control.dart';
+import '../widgets/goal_customizer_sheet.dart';
 import '../models/goal.dart';
 import '../models/budget.dart';
 import '../models/transaction.dart';
@@ -718,37 +720,41 @@ class _GoalsScreenState extends State<GoalsScreen> {
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
-      builder: (ctx) => Consumer<GoalProvider>(
-        builder: (context, provider, _) {
-          final contributions = provider.getContributions(goal.id!);
-          return StatefulBuilder(
-            builder: (ctx, setSheetState) => Padding(
-              padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Header with icon, name, and close
-                  Row(
+          builder: (ctx) => Consumer<GoalProvider>(
+            builder: (context, provider, _) {
+              final currentGoal = provider.goals.firstWhere(
+                (g) => g.id == goal.id, orElse: () => goal,
+              );
+              final goalColor = colorFromHex(currentGoal.colorHex);
+              final contributions = provider.getContributions(goal.id!);
+              return StatefulBuilder(
+                builder: (ctx, setSheetState) => Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Container(
-                        width: 44, height: 44,
-                        decoration: BoxDecoration(
-                          color: AppColors.surfaceContainer,
-                          borderRadius: BorderRadius.circular(22),
-                        ),
-                        child: Icon(
-                          _goalIconMap[goal.icon] ?? Icons.flag,
-                          size: 22, color: AppColors.primary,
-                        ),
-                      ),
+                      // Header with icon, name, and close
+                      Row(
+                        children: [
+                          Container(
+                            width: 44, height: 44,
+                            decoration: BoxDecoration(
+                              color: goalColor.withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(22),
+                            ),
+                            child: Icon(
+                              iconDataFromString(currentGoal.icon),
+                              size: 22, color: goalColor,
+                            ),
+                          ),
                       const SizedBox(width: 12),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(goal.title, style: Theme.of(context).textTheme.titleLarge),
-                            Text(goal.deadline, style: Theme.of(context).textTheme.labelSmall),
+                            Text(currentGoal.title, style: Theme.of(context).textTheme.titleLarge),
+                            Text(currentGoal.deadline, style: Theme.of(context).textTheme.labelSmall),
                           ],
                         ),
                       ),
@@ -770,16 +776,16 @@ class _GoalsScreenState extends State<GoalsScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text('${formatCurrency(goal.savedAmount)} ahorrados', style: Theme.of(context).textTheme.labelSmall),
-                      Text('${(goal.progress * 100).toInt()}%', style: Theme.of(context).textTheme.titleLarge),
+                      Text('${formatCurrency(currentGoal.savedAmount)} ahorrados', style: Theme.of(context).textTheme.labelSmall),
+                      Text('${(currentGoal.progress * 100).toInt()}%', style: Theme.of(context).textTheme.titleLarge),
                     ],
                   ),
                   const SizedBox(height: 8),
-                  SimpleProgressBar(progress: goal.progress),
+                  SimpleProgressBar(progress: currentGoal.progress),
                   const SizedBox(height: 4),
                   Align(
                     alignment: Alignment.centerRight,
-                    child: Text('Meta: ${formatCurrency(goal.targetAmount)}', style: Theme.of(context).textTheme.labelSmall),
+                    child: Text('Meta: ${formatCurrency(currentGoal.targetAmount)}', style: Theme.of(context).textTheme.labelSmall),
                   ),
                   const SizedBox(height: 16),
                   // Add contribution
@@ -789,7 +795,7 @@ class _GoalsScreenState extends State<GoalsScreen> {
                         child: Text('Historial', style: Theme.of(context).textTheme.titleLarge),
                       ),
                       FilledButton.icon(
-                        onPressed: () => _showAddContribution(ctx, goal),
+                        onPressed: () => _showAddContribution(ctx, currentGoal),
                         icon: const Icon(Icons.add, size: 18),
                         label: const Text('Aportar'),
                         style: FilledButton.styleFrom(
@@ -836,7 +842,7 @@ class _GoalsScreenState extends State<GoalsScreen> {
                     children: [
                       Expanded(
                         child: OutlinedButton.icon(
-                          onPressed: () => _editGoalName(ctx, goal, setSheetState),
+                          onPressed: () => _editGoalName(ctx, currentGoal, setSheetState),
                           icon: const Icon(Icons.edit_outlined, size: 18),
                           label: const Text('Editar nombre'),
                         ),
@@ -844,9 +850,21 @@ class _GoalsScreenState extends State<GoalsScreen> {
                       const SizedBox(width: 8),
                       Expanded(
                         child: OutlinedButton.icon(
-                          onPressed: () => _editGoalIcon(ctx, goal, setSheetState),
+                          onPressed: () async {
+                            final result = await GoalCustomizerSheet.show(
+                              ctx,
+                              currentIcon: currentGoal.icon,
+                              currentColor: currentGoal.colorHex,
+                            );
+                            if (result != null && ctx.mounted) {
+                              context.read<GoalProvider>().updateGoal(currentGoal.copyWith(
+                                icon: result.$1,
+                                colorHex: result.$2,
+                              ));
+                            }
+                          },
                           icon: const Icon(Icons.emoji_symbols_outlined, size: 18),
-                          label: const Text('Cambiar ícono'),
+                          label: const Text('Personalizar'),
                         ),
                       ),
                     ],
@@ -855,7 +873,7 @@ class _GoalsScreenState extends State<GoalsScreen> {
                   SizedBox(
                     width: double.infinity,
                     child: TextButton.icon(
-                      onPressed: () => _deleteGoal(ctx, goal),
+                      onPressed: () => _deleteGoal(ctx, currentGoal),
                       icon: const Icon(Icons.delete_outline, size: 18, color: AppColors.error),
                       label: const Text('Eliminar meta', style: TextStyle(color: AppColors.error)),
                     ),
@@ -930,45 +948,6 @@ class _GoalsScreenState extends State<GoalsScreen> {
     );
   }
 
-  void _editGoalIcon(BuildContext ctx, Goal goal, void Function(void Function()) setSheetState) {
-    IconData selectedIcon = _goalIconMap[goal.icon] ?? Icons.flag;
-    showDialog(
-      context: ctx,
-      builder: (c) => AlertDialog(
-        title: const Text('Cambiar ícono'),
-        content: SizedBox(
-          width: 280,
-          child: GridView.count(
-            crossAxisCount: 5,
-            mainAxisSpacing: 8,
-            crossAxisSpacing: 8,
-            shrinkWrap: true,
-            children: _goalIcons.map((icon) {
-              final isSelected = icon == selectedIcon;
-              return GestureDetector(
-                onTap: () {
-                  context.read<GoalProvider>().updateGoal(goal.copyWith(icon: _iconName(icon)));
-                  Navigator.pop(c);
-                },
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: isSelected ? AppColors.tertiaryFixedDim.withValues(alpha: 0.3) : AppColors.surfaceContainer,
-                    borderRadius: BorderRadius.circular(12),
-                    border: isSelected ? Border.all(color: AppColors.primary) : null,
-                  ),
-                  child: Icon(icon, size: 24, color: isSelected ? AppColors.onTertiaryContainer : AppColors.primary),
-                ),
-              );
-            }).toList(),
-          ),
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(c), child: const Text('Cancelar')),
-        ],
-      ),
-    );
-  }
-
   void _deleteGoal(BuildContext ctx, Goal goal) {
     showDialog(
       context: ctx,
@@ -1005,6 +984,7 @@ class _GoalCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final goalColor = colorFromHex(goal.colorHex);
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -1030,12 +1010,12 @@ class _GoalCard extends StatelessWidget {
                   width: 40,
                   height: 40,
                   decoration: BoxDecoration(
-                    color: AppColors.surfaceContainer,
+                    color: goalColor.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Icon(
-                    _iconData(goal.icon),
-                    color: AppColors.primary,
+                    iconDataFromString(goal.icon),
+                    color: goalColor,
                     size: 20,
                   ),
                 ),
@@ -1081,25 +1061,6 @@ class _GoalCard extends StatelessWidget {
     );
   }
 
-  IconData _iconData(String name) {
-    switch (name) {
-      case 'flight_takeoff': return Icons.flight_takeoff;
-      case 'savings': return Icons.savings;
-      case 'shopping_cart': return Icons.shopping_cart;
-      case 'restaurant': return Icons.restaurant;
-      case 'directions_car': return Icons.directions_car;
-      case 'home': return Icons.home;
-      case 'school': return Icons.school;
-      case 'favorite': return Icons.favorite;
-      case 'card_giftcard': return Icons.card_giftcard;
-      case 'trending_up': return Icons.trending_up;
-      case 'pets': return Icons.pets;
-      case 'devices': return Icons.devices;
-      case 'fitness_center': return Icons.fitness_center;
-      case 'book': return Icons.book;
-      default: return Icons.flag;
-    }
-  }
 }
 
 class _BudgetItem extends StatelessWidget {
