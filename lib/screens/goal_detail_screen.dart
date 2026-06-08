@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
-import '../data/database_helper.dart';
 import '../models/goal.dart';
 import '../providers/goal_provider.dart';
 import '../theme/app_colors.dart';
@@ -50,9 +49,9 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
   }
 
   Future<void> _load() async {
-    final goals = await DatabaseHelper().getGoals();
-    final goal = goals.where((g) => g.id == widget.goalId).firstOrNull;
-    final contributions = await DatabaseHelper().getContributions(widget.goalId);
+    final provider = context.read<GoalProvider>();
+    final goal = provider.goals.where((g) => g.id == widget.goalId).firstOrNull;
+    final contributions = provider.getContributions(widget.goalId);
     if (!mounted) return;
     setState(() {
       _goal = goal;
@@ -153,9 +152,9 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
                           onPressed: amount > 0
                               ? () async {
                                   await context.read<GoalProvider>().addContribution(goal.id!, amount);
-                                  Navigator.pop(c);
-                                  _load();
+                                  if (c.mounted) Navigator.pop(c);
                                   _confettiController.play();
+                                  _load();
                                 }
                               : null,
                           style: ElevatedButton.styleFrom(
