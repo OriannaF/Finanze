@@ -5,6 +5,7 @@ import '../models/transaction.dart';
 import '../providers/transaction_provider.dart';
 import '../theme/app_colors.dart';
 import '../utils/date_formatter.dart';
+import '../utils/icon_utils.dart';
 import '../widgets/edit_transaction_bottom_sheet.dart';
 import '../widgets/transaction_tile.dart';
 import '../widgets/segmented_control.dart';
@@ -152,7 +153,76 @@ class _ActivityScreenState extends State<ActivityScreen> {
                     ],
                   ),
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 16),
+                // Category filter
+                SizedBox(
+                  height: 40,
+                  child: ListView.separated(
+                    scrollDirection: Axis.horizontal,
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                    itemCount: TransactionCategory.values.length + 1,
+                    separatorBuilder: (_, _) => const SizedBox(width: 8),
+                    itemBuilder: (context, index) {
+                      if (index == 0) {
+                        final selected = _filterCategory == null;
+                        return GestureDetector(
+                          onTap: () => setState(() => _filterCategory = null),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            decoration: BoxDecoration(
+                              color: selected ? Colors.black : AppColors.surfaceContainerHighest,
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Center(
+                              child: Text(
+                                'Todas',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w500,
+                                  fontFamily: 'Inter',
+                                  color: selected ? Colors.white : AppColors.onSurfaceVariant,
+                                ),
+                              ),
+                            ),
+                          ),
+                        );
+                      }
+                      final cat = TransactionCategory.values[index - 1];
+                      final selected = _filterCategory == cat;
+                      return GestureDetector(
+                        onTap: () => setState(() => _filterCategory = selected ? null : cat),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 14),
+                          decoration: BoxDecoration(
+                            color: selected ? cat.color : AppColors.surfaceContainerHighest,
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                iconDataFromString(cat.icon),
+                                size: 16,
+                                color: selected ? Colors.white : AppColors.onSurfaceVariant,
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                cat.label,
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w500,
+                                  fontFamily: 'Inter',
+                                  color: selected ? Colors.white : AppColors.onSurfaceVariant,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                const SizedBox(height: 16),
                 if (provider.isLoading)
                   const Center(child: CircularProgressIndicator())
                 else if (_filteredTransactions.isEmpty)

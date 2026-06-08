@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../models/goal.dart';
 import '../providers/goal_provider.dart';
 import '../theme/app_colors.dart';
+import '../utils/currency_formatter.dart';
 import '../utils/icon_utils.dart';
 import '../widgets/icon_color_picker_sheet.dart';
 
@@ -20,7 +21,6 @@ class EditGoalScreen extends StatefulWidget {
 class _EditGoalScreenState extends State<EditGoalScreen> {
   late TextEditingController _nameCtrl;
   late TextEditingController _amountCtrl;
-  late FocusNode _amountFocusNode;
   late String _selectedIcon;
   late String _selectedColor;
   late DateTime _selectedDate;
@@ -30,8 +30,7 @@ class _EditGoalScreenState extends State<EditGoalScreen> {
   void initState() {
     super.initState();
     _nameCtrl = TextEditingController(text: widget.goal.title);
-    _amountCtrl = TextEditingController(text: widget.goal.targetAmount.toInt().toString());
-    _amountFocusNode = FocusNode();
+    _amountCtrl = TextEditingController(text: widget.goal.targetAmount.toString().replaceAll('.', ','));
     _selectedIcon = widget.goal.icon;
     _selectedColor = widget.goal.colorHex;
     final parsed = DateFormat.yMMMd('es').tryParse(widget.goal.deadline);
@@ -42,7 +41,6 @@ class _EditGoalScreenState extends State<EditGoalScreen> {
   void dispose() {
     _nameCtrl.dispose();
     _amountCtrl.dispose();
-    _amountFocusNode.dispose();
     super.dispose();
   }
 
@@ -183,51 +181,57 @@ class _EditGoalScreenState extends State<EditGoalScreen> {
                                   ),
                                 ),
                                 const SizedBox(height: 8),
-                                GestureDetector(
-                                  onTap: () => FocusScope.of(context).requestFocus(_amountFocusNode),
-                                  child: Text(
-                                    '\$ ${_amountCtrl.text.isEmpty ? '0' : _amountCtrl.text}',
-                                    textAlign: TextAlign.center,
-                                    style: TextStyle(
-                                      color: Colors.black,
-                                      fontSize: 34,
-                                      fontFamily: 'Inter',
-                                      fontWeight: FontWeight.w700,
-                                      letterSpacing: -0.85,
+                                Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(
+                                      '\$',
+                                      style: TextStyle(
+                                        color: Colors.black,
+                                        fontSize: 34,
+                                        fontFamily: 'Inter',
+                                        fontWeight: FontWeight.w700,
+                                        letterSpacing: -0.5,
+                                      ),
                                     ),
-                                  ),
+                                    const SizedBox(width: 4),
+                                    SizedBox(
+                                      width: 192,
+                                      child: TextField(
+                                        controller: _amountCtrl,
+                                        keyboardType: TextInputType.number,
+                                        textAlign: TextAlign.center,
+                                        style: TextStyle(
+                                          color: Colors.black,
+                                          fontSize: 34,
+                                          fontFamily: 'Inter',
+                                          fontWeight: FontWeight.w700,
+                                          letterSpacing: -0.5,
+                                        ),
+                                        decoration: const InputDecoration(
+                                          border: InputBorder.none,
+                                          contentPadding: EdgeInsets.zero,
+                                          isDense: true,
+                                        ),
+                                        inputFormatters: [ThousandsInputFormatter()],
+                                        onChanged: (_) => setState(() {}),
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                                const SizedBox(height: 8),
-                                SizedBox(
-                                  width: 180,
-                                  child: TextField(
-                                    controller: _amountCtrl,
-                                    focusNode: _amountFocusNode,
-                                    keyboardType: TextInputType.number,
-                                    textAlign: TextAlign.center,
-                                    style: TextStyle(
-                                      color: Colors.black,
-                                      fontSize: 20,
-                                      fontFamily: 'Inter',
-                                      fontWeight: FontWeight.w600,
+                                const SizedBox(height: 16),
+                                Container(
+                                  width: 200,
+                                  height: 2,
+                                  decoration: ShapeDecoration(
+                                    color: const Color(0x7FCFC4C5),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.only(
+                                        topLeft: Radius.circular(9999),
+                                        topRight: Radius.circular(9999),
+                                        bottomLeft: Radius.circular(9999),
+                                      ),
                                     ),
-                                    decoration: InputDecoration(
-                                      border: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(12),
-                                        borderSide: BorderSide(color: const Color(0xFFCFC4C5)),
-                                      ),
-                                      enabledBorder: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(12),
-                                        borderSide: BorderSide(color: const Color(0xFFCFC4C5)),
-                                      ),
-                                      focusedBorder: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(12),
-                                        borderSide: BorderSide(color: const Color(0xFFB75AE6), width: 2),
-                                      ),
-                                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                                      isDense: true,
-                                    ),
-                                    onChanged: (_) => setState(() {}),
                                   ),
                                 ),
                               ],
@@ -254,6 +258,50 @@ class _EditGoalScreenState extends State<EditGoalScreen> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
+                                // Icon + edit button (centered)
+                                Center(
+                                  child: GestureDetector(
+                                    onTap: _openIconPicker,
+                                    child: Stack(
+                                      children: [
+                                        Container(
+                                          width: 56,
+                                          height: 56,
+                                          decoration: BoxDecoration(
+                                            color: goalColor.withValues(alpha: 0.15),
+                                            borderRadius: BorderRadius.circular(9999),
+                                          ),
+                                          child: Icon(
+                                            iconDataFromString(_selectedIcon),
+                                            size: 26,
+                                            color: goalColor,
+                                          ),
+                                        ),
+                                        Positioned(
+                                          right: 0,
+                                          bottom: 0,
+                                          child: Container(
+                                            width: 22,
+                                            height: 22,
+                                            decoration: BoxDecoration(
+                                              color: Colors.white,
+                                              shape: BoxShape.circle,
+                                              boxShadow: [
+                                                BoxShadow(
+                                                  color: Colors.black.withValues(alpha: 0.1),
+                                                  blurRadius: 4,
+                                                  offset: const Offset(0, 2),
+                                                ),
+                                              ],
+                                            ),
+                                            child: const Icon(Icons.edit, size: 13, color: Color(0xFF4C4546)),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: 24),
                                 // Name field
                                 Padding(
                                   padding: const EdgeInsets.only(left: 16),
@@ -300,49 +348,6 @@ class _EditGoalScreenState extends State<EditGoalScreen> {
                                         ),
                                       ),
                                     ],
-                                  ),
-                                ),
-                                // Icon + edit button (centered)
-                                Center(
-                                  child: GestureDetector(
-                                    onTap: _openIconPicker,
-                                    child: Stack(
-                                      children: [
-                                        Container(
-                                          width: 56,
-                                          height: 56,
-                                          decoration: BoxDecoration(
-                                            color: goalColor.withValues(alpha: 0.15),
-                                            borderRadius: BorderRadius.circular(9999),
-                                          ),
-                                          child: Icon(
-                                            iconDataFromString(_selectedIcon),
-                                            size: 26,
-                                            color: goalColor,
-                                          ),
-                                        ),
-                                        Positioned(
-                                          right: 0,
-                                          bottom: 0,
-                                          child: Container(
-                                            width: 22,
-                                            height: 22,
-                                            decoration: BoxDecoration(
-                                              color: Colors.white,
-                                              shape: BoxShape.circle,
-                                              boxShadow: [
-                                                BoxShadow(
-                                                  color: Colors.black.withValues(alpha: 0.1),
-                                                  blurRadius: 4,
-                                                  offset: const Offset(0, 2),
-                                                ),
-                                              ],
-                                            ),
-                                            child: const Icon(Icons.edit, size: 13, color: Color(0xFF4C4546)),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
                                   ),
                                 ),
                                 const SizedBox(height: 24),

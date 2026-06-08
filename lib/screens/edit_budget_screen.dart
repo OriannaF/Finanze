@@ -5,6 +5,7 @@ import '../models/budget.dart';
 import '../models/transaction.dart';
 import '../providers/goal_provider.dart';
 import '../theme/app_colors.dart';
+import '../utils/currency_formatter.dart';
 
 class EditBudgetScreen extends StatefulWidget {
   final Budget budget;
@@ -193,6 +194,7 @@ class _EditBudgetScreenState extends State<EditBudgetScreen> {
                                           contentPadding: EdgeInsets.zero,
                                           isDense: true,
                                         ),
+                                        inputFormatters: [ThousandsInputFormatter()],
                                       ),
                                     ),
                                   ],

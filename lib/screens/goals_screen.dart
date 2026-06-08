@@ -1,15 +1,15 @@
+import 'package:confetti/confetti.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../providers/goal_provider.dart';
 import '../theme/app_colors.dart';
 import '../utils/currency_formatter.dart';
 import '../utils/icon_utils.dart';
 import '../widgets/progress_bar.dart';
 import '../widgets/segmented_control.dart';
-import '../widgets/icon_color_picker_sheet.dart';
 import '../models/goal.dart';
 import '../models/budget.dart';
 import '../models/transaction.dart';
@@ -22,12 +22,21 @@ class GoalsScreen extends StatefulWidget {
 }
 
 class _GoalsScreenState extends State<GoalsScreen> {
+  late ConfettiController _confettiController;
+
   @override
   void initState() {
     super.initState();
+    _confettiController = ConfettiController(duration: const Duration(seconds: 2));
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<GoalProvider>().loadData();
     });
+  }
+
+  @override
+  void dispose() {
+    _confettiController.dispose();
+    super.dispose();
   }
 
   @override
@@ -44,11 +53,25 @@ class _GoalsScreenState extends State<GoalsScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const SizedBox(height: 44),
-                    Text(
-                      'Metas',
-                      style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                        fontSize: 20,
-                      ),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Metas',
+                          style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                            fontSize: 20,
+                          ),
+                        ),
+                        TextButton.icon(
+                          onPressed: () => _showCreateSheet(context),
+                          icon: const Icon(Icons.add, size: 18),
+                          label: const Text('Agregar objetivo'),
+                          style: TextButton.styleFrom(
+                            foregroundColor: AppColors.primary,
+                            padding: const EdgeInsets.symmetric(horizontal: 12),
+                          ),
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 16),
                     // Goals list
@@ -170,12 +193,12 @@ class _GoalsScreenState extends State<GoalsScreen> {
                   ),
                 ),
               ),
-              // FAB
+              // FAB - Aportar
               Positioned(
                 right: 4,
                 bottom: 16,
                 child: GestureDetector(
-                  onTap: () => _showCreateSheet(context),
+                  onTap: () => context.push('/aportar'),
                   child: Container(
                     width: 56,
                     height: 56,
@@ -342,7 +365,7 @@ class _GoalsScreenState extends State<GoalsScreen> {
                     child: TextField(
                       controller: amountCtrl,
                       keyboardType: TextInputType.number,
-                      inputFormatters: [_ThousandsInputFormatter()],
+                      inputFormatters: [ThousandsInputFormatter()],
                       textAlign: TextAlign.left,
                       style: TextStyle(
                         fontSize: 32,
@@ -555,7 +578,7 @@ class _GoalsScreenState extends State<GoalsScreen> {
                     child: TextField(
                       controller: limitCtrl,
                       keyboardType: TextInputType.number,
-                      inputFormatters: [_ThousandsInputFormatter()],
+                      inputFormatters: [ThousandsInputFormatter()],
                       textAlign: TextAlign.left,
                       style: TextStyle(
                         fontSize: 32,
@@ -717,264 +740,6 @@ class _GoalsScreenState extends State<GoalsScreen> {
     }
   }
 
-  void _showGoalDetail(BuildContext context, Goal goal) {
-    final provider = context.read<GoalProvider>();
-    provider.loadContributions(goal.id!);
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-          builder: (ctx) => Consumer<GoalProvider>(
-            builder: (context, provider, _) {
-              final currentGoal = provider.goals.firstWhere(
-                (g) => g.id == goal.id, orElse: () => goal,
-              );
-              final goalColor = colorFromHex(currentGoal.colorHex);
-              final contributions = provider.getContributions(goal.id!);
-              return StatefulBuilder(
-                builder: (ctx, setSheetState) => Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Header with icon, name, and close
-                      Row(
-                        children: [
-                          Container(
-                            width: 44, height: 44,
-                            decoration: BoxDecoration(
-                              color: goalColor.withValues(alpha: 0.15),
-                              borderRadius: BorderRadius.circular(22),
-                            ),
-                            child: Icon(
-                              iconDataFromString(currentGoal.icon),
-                              size: 22, color: goalColor,
-                            ),
-                          ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(currentGoal.title, style: Theme.of(context).textTheme.titleLarge),
-                            Text(currentGoal.deadline, style: Theme.of(context).textTheme.labelSmall),
-                          ],
-                        ),
-                      ),
-                      GestureDetector(
-                        onTap: () => Navigator.pop(ctx),
-                        child: Container(
-                          width: 32, height: 32,
-                          decoration: BoxDecoration(
-                            color: AppColors.surfaceContainer,
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                          child: const Icon(Icons.close, size: 18, color: AppColors.primary),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  // Progress
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text('${formatCurrency(currentGoal.savedAmount)} ahorrados', style: Theme.of(context).textTheme.labelSmall),
-                      Text('${(currentGoal.progress * 100).toInt()}%', style: Theme.of(context).textTheme.titleLarge),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  SimpleProgressBar(progress: currentGoal.progress),
-                  const SizedBox(height: 4),
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: Text('Meta: ${formatCurrency(currentGoal.targetAmount)}', style: Theme.of(context).textTheme.labelSmall),
-                  ),
-                  const SizedBox(height: 16),
-                  // Add contribution
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text('Historial', style: Theme.of(context).textTheme.titleLarge),
-                      ),
-                      FilledButton.icon(
-                        onPressed: () => _showAddContribution(ctx, currentGoal),
-                        icon: const Icon(Icons.add, size: 18),
-                        label: const Text('Aportar'),
-                        style: FilledButton.styleFrom(
-                          backgroundColor: AppColors.lilac,
-                          foregroundColor: Colors.white,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  // Contributions list
-                  if (contributions.isEmpty)
-                    const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 16),
-                      child: Center(child: Text('Sin aportes aún', style: TextStyle(color: AppColors.onSurfaceVariant))),
-                    )
-                  else
-                    SizedBox(
-                      height: 120,
-                      child: ListView.separated(
-                        itemCount: contributions.length,
-                        separatorBuilder: (_, _) => const Divider(height: 1),
-                        itemBuilder: (_, i) {
-                          final c = contributions[i];
-                          return ListTile(
-                            dense: true,
-                            leading: Container(
-                              width: 32, height: 32,
-                              decoration: BoxDecoration(
-                                color: AppColors.greenBg,
-                                borderRadius: BorderRadius.circular(16),
-                              ),
-                              child: const Icon(Icons.arrow_upward, size: 16, color: AppColors.green),
-                            ),
-                            title: Text('+${formatCurrency(c.amount)}', style: const TextStyle(color: AppColors.green, fontWeight: FontWeight.w600)),
-                            trailing: Text(DateFormat.yMd('es').add_Hm().format(c.date), style: Theme.of(context).textTheme.labelSmall),
-                          );
-                        },
-                      ),
-                    ),
-                  const SizedBox(height: 12),
-                  // Actions
-                  Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton.icon(
-                          onPressed: () => _editGoalName(ctx, currentGoal, setSheetState),
-                          icon: const Icon(Icons.edit_outlined, size: 18),
-                          label: const Text('Editar nombre'),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: OutlinedButton.icon(
-                          onPressed: () async {
-                            final result = await IconColorPickerSheet.show(
-                              ctx,
-                              currentIcon: currentGoal.icon,
-                              currentColor: currentGoal.colorHex,
-                            );
-                            if (result != null && ctx.mounted) {
-                              context.read<GoalProvider>().updateGoal(currentGoal.copyWith(
-                                icon: result.$1,
-                                colorHex: result.$2,
-                              ));
-                            }
-                          },
-                          icon: const Icon(Icons.emoji_symbols_outlined, size: 18),
-                          label: const Text('Personalizar'),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  SizedBox(
-                    width: double.infinity,
-                    child: TextButton.icon(
-                      onPressed: () => _deleteGoal(ctx, currentGoal),
-                      icon: const Icon(Icons.delete_outline, size: 18, color: AppColors.error),
-                      label: const Text('Eliminar meta', style: TextStyle(color: AppColors.error)),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-  void _showAddContribution(BuildContext ctx, Goal goal) {
-    final ctrl = TextEditingController();
-    showDialog(
-      context: ctx,
-      builder: (c) => AlertDialog(
-        title: const Text('Aportar a meta'),
-        content: TextField(
-          controller: ctrl,
-          keyboardType: TextInputType.number,
-          autofocus: true,
-          decoration: const InputDecoration(
-            hintText: 'Monto',
-            border: OutlineInputBorder(),
-          ),
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(c), child: const Text('Cancelar')),
-          FilledButton(
-            onPressed: () {
-              final amount = double.tryParse(ctrl.text);
-              if (amount != null && amount > 0) {
-                context.read<GoalProvider>().addContribution(goal.id!, amount);
-              }
-              Navigator.pop(c);
-            },
-            child: const Text('Agregar'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _editGoalName(BuildContext ctx, Goal goal, void Function(void Function()) setSheetState) {
-    final ctrl = TextEditingController(text: goal.title);
-    showDialog(
-      context: ctx,
-      builder: (c) => AlertDialog(
-        title: const Text('Editar nombre'),
-        content: TextField(
-          controller: ctrl,
-          autofocus: true,
-          decoration: const InputDecoration(
-            border: OutlineInputBorder(),
-          ),
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(c), child: const Text('Cancelar')),
-          FilledButton(
-            onPressed: () {
-              if (ctrl.text.trim().isNotEmpty) {
-                context.read<GoalProvider>().updateGoal(goal.copyWith(title: ctrl.text.trim()));
-              }
-              Navigator.pop(c);
-            },
-            child: const Text('Guardar'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _deleteGoal(BuildContext ctx, Goal goal) {
-    showDialog(
-      context: ctx,
-      builder: (c) => AlertDialog(
-        title: const Text('Eliminar meta'),
-        content: Text('¿Eliminar "${goal.title}"? Se borrará todo el historial de aportes.'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(c), child: const Text('Cancelar')),
-          FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: AppColors.error),
-            onPressed: () {
-              context.read<GoalProvider>().deleteGoal(goal.id!);
-              Navigator.pop(c);
-              Navigator.pop(ctx);
-            },
-            child: const Text('Eliminar'),
-          ),
-        ],
-      ),
-    );
-  }
-
   String _capMonth(String s) {
     if (s.isEmpty) return s;
     return s[0].toUpperCase() + s.substring(1);
@@ -1089,7 +854,7 @@ class _GoalCard extends StatelessWidget {
                   ),
                 ),
                 Text(
-                  '${formatCurrencyWhole(goal.targetAmount)}',
+                  formatCurrencyWhole(goal.targetAmount),
                   style: const TextStyle(
                     color: Color(0xFF9E9E9E),
                     fontSize: 14,
@@ -1197,10 +962,9 @@ class _BudgetItem extends StatelessWidget {
                     const SizedBox(width: 16),
                     Text(
                       budget.categoryName,
-                      style: const TextStyle(
-                        color: Color(0xFF191C1D),
+                      style: GoogleFonts.inter(
+                        color: const Color(0xFF191C1D),
                         fontSize: 18,
-                        fontFamily: 'Inter',
                         fontWeight: FontWeight.w600,
                         height: 1.33,
                       ),
@@ -1214,10 +978,9 @@ class _BudgetItem extends StatelessWidget {
                     Text(
                       formatCurrencyWhole(budget.spent),
                       textAlign: TextAlign.right,
-                      style: TextStyle(
+                      style: GoogleFonts.inter(
                         color: isOver ? AppColors.error : Colors.black,
                         fontSize: 18,
-                        fontFamily: 'Inter',
                         fontWeight: FontWeight.w600,
                         height: 1.33,
                       ),
@@ -1225,10 +988,9 @@ class _BudgetItem extends StatelessWidget {
                     Text(
                       'de ${formatCurrencyWhole(budget.limit)}',
                       textAlign: TextAlign.right,
-                      style: const TextStyle(
-                        color: Color(0xFF4C4546),
+                      style: GoogleFonts.inter(
+                        color: const Color(0xFF4C4546),
                         fontSize: 12,
-                        fontFamily: 'Inter',
                         fontWeight: FontWeight.w500,
                         height: 1.33,
                         letterSpacing: 0.12,
@@ -1257,10 +1019,9 @@ class _BudgetItem extends StatelessWidget {
                         ? '${formatCurrencyWhole(budget.remaining.abs())} excedido'
                         : '${formatCurrencyWhole(budget.remaining)} restante',
                     textAlign: TextAlign.right,
-                    style: TextStyle(
+                    style: GoogleFonts.inter(
                       color: isOver ? AppColors.error : const Color(0xFF4C4546),
                       fontSize: 12,
-                      fontFamily: 'Inter',
                       fontWeight: FontWeight.w500,
                       height: 1.33,
                       letterSpacing: 0.12,
@@ -1286,25 +1047,5 @@ class _BudgetItem extends StatelessWidget {
       case TransactionCategory.education: return Icons.school;
       default: return Icons.more_horiz;
     }
-  }
-}
-
-class _ThousandsInputFormatter extends TextInputFormatter {
-  @override
-  TextEditingValue formatEditUpdate(TextEditingValue oldValue, TextEditingValue newValue) {
-    final digitsOnly = newValue.text.replaceAll(RegExp(r'[^\d]'), '');
-    if (digitsOnly.isEmpty) return TextEditingValue.empty;
-    final buffer = StringBuffer();
-    for (int i = 0; i < digitsOnly.length; i++) {
-      if (i > 0 && (digitsOnly.length - i) % 3 == 0) {
-        buffer.write('.');
-      }
-      buffer.write(digitsOnly[i]);
-    }
-    final formatted = buffer.toString();
-    return TextEditingValue(
-      text: formatted,
-      selection: TextSelection.collapsed(offset: formatted.length),
-    );
   }
 }

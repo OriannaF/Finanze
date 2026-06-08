@@ -342,6 +342,7 @@ class _BudgetTransactionsScreenState extends State<BudgetTransactionsScreen> {
                               contentPadding: EdgeInsets.zero,
                               isDense: true,
                             ),
+                            inputFormatters: [ThousandsInputFormatter()],
                             onSubmitted: (v) {
                               _editingLimit = false;
                               _saveLimit(v);

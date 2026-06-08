@@ -14,6 +14,7 @@ import '../screens/account_settings_screen.dart';
 import '../screens/account_detail_screen.dart';
 import '../screens/goal_detail_screen.dart';
 import '../screens/budget_transactions_screen.dart';
+import '../screens/aportar_screen.dart';
 
 final GlobalKey<NavigatorState> _rootNavigatorKey = GlobalKey<NavigatorState>();
 
@@ -132,6 +133,11 @@ GoRouter createRouter({String initialRoute = '/'}) {
           );
           return BudgetTransactionsScreen(budgetId: budgetId, category: category);
         },
+      ),
+      GoRoute(
+        path: '/aportar',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const AportarScreen(),
       ),
     ],
   );
