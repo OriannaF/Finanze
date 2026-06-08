@@ -82,6 +82,7 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
     final goal = _goal;
     if (goal == null) return;
     double amount = 0;
+    final screenContext = context;
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -154,7 +155,8 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
                                   await context.read<GoalProvider>().addContribution(goal.id!, amount);
                                   if (c.mounted) Navigator.pop(c);
                                   _confettiController.play();
-                                  _load();
+                                  await Future.delayed(const Duration(milliseconds: 600));
+                                  if (screenContext.mounted) screenContext.go('/goals');
                                 }
                               : null,
                           style: ElevatedButton.styleFrom(
