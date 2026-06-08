@@ -43,6 +43,12 @@ class _GoalsScreenState extends State<GoalsScreen> {
   Widget build(BuildContext context) {
     return Consumer<GoalProvider>(
       builder: (context, provider, _) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (provider.shouldPlayConfetti) {
+            _confettiController.play();
+            provider.consumeConfetti();
+          }
+        });
         return SafeArea(
           child: Stack(
             clipBehavior: Clip.none,

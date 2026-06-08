@@ -152,11 +152,13 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
                         child: ElevatedButton(
                           onPressed: amount > 0
                               ? () async {
-                                  await context.read<GoalProvider>().addContribution(goal.id!, amount);
+                                  final goalProvider = context.read<GoalProvider>();
+                                  await goalProvider.addContribution(goal.id!, amount);
                                   if (c.mounted) Navigator.pop(c);
-                                  _confettiController.play();
-                                  await Future.delayed(const Duration(milliseconds: 600));
-                                  if (screenContext.mounted) screenContext.go('/goals');
+                                  if (screenContext.mounted) {
+                                    screenContext.go('/goals');
+                                    goalProvider.triggerConfetti();
+                                  }
                                 }
                               : null,
                           style: ElevatedButton.styleFrom(

@@ -9,10 +9,22 @@ class GoalProvider extends ChangeNotifier {
   List<Budget> _budgets = [];
   final Map<int, List<GoalContribution>> _contributions = {};
   bool _isLoading = false;
+  bool _shouldPlayConfetti = false;
 
   List<Goal> get goals => _goals;
   List<Budget> get budgets => _budgets;
   bool get isLoading => _isLoading;
+
+  void triggerConfetti() {
+    _shouldPlayConfetti = true;
+    notifyListeners();
+  }
+
+  void consumeConfetti() {
+    _shouldPlayConfetti = false;
+  }
+
+  bool get shouldPlayConfetti => _shouldPlayConfetti;
 
   List<GoalContribution> getContributions(int goalId) =>
       _contributions[goalId] ?? [];
